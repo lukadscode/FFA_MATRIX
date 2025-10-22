@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase, Participant, Race } from '../lib/supabase';
+import { Participant, Race } from '../lib/types';
 import { useErgRaceWebSocket, PM5Data } from '../hooks/useErgRaceWebSocket';
 import { ParticipantCard } from './ParticipantCard';
 import { TeamCard } from './TeamCard';
@@ -60,24 +60,18 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
 
       const newTotalDistance = participant.total_distance_in_cadence + distanceGained;
 
-      await supabase
-        .from('participants')
-        .update({
-          current_cadence: cadence,
-          is_in_cadence: isInCadence,
-          total_distance_in_cadence: newTotalDistance,
-        })
-        .eq('id', participant.id);
-
-      if (distanceGained > 0) {
-        await supabase.from('cadence_events').insert({
-          participant_id: participant.id,
-          race_id: raceId,
-          cadence: cadence,
-          was_in_cadence: isInCadence,
-          distance_gained: distanceGained,
-        });
-      }
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === participant.id
+            ? {
+                ...p,
+                current_cadence: cadence,
+                is_in_cadence: isInCadence,
+                total_distance_in_cadence: newTotalDistance,
+              }
+            : p
+        )
+      );
     },
     [participants, config, raceId, race]
   );
@@ -157,8 +151,8 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
       .subscribe();
 
     return () => {
-      supabase.removeChannel(raceChannel);
-      supabase.removeChannel(participantsChannel);
+      // supabase.removeChannel(raceChannel);
+      // supabase.removeChannel(participantsChannel);
     };
   }, [raceId]);
 

@@ -1,37 +1,36 @@
 import { useNavigate } from 'react-router-dom';
 import { RaceSetup, RaceConfig } from '../components/RaceSetup';
-import { supabase } from '../lib/supabase';
+import { wsClient } from '../lib/websocket';
 
 export const SetupPage = () => {
   const navigate = useNavigate();
 
   const handleStartRace = async (config: RaceConfig) => {
-    const { data: race } = await supabase
-      .from('races')
-      .insert({
-        name: config.name,
-        mode: config.mode,
-        target_cadence: config.targetCadence,
-        cadence_tolerance: config.cadenceTolerance,
-        duration_seconds: 300,
-        status: 'active',
-        started_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    const race = await wsClient.createRace({
+      name: config.name,
+      mode: config.mode,
+      target_cadence: config.targetCadence,
+      cadence_tolerance: config.cadenceTolerance,
+      duration_seconds: 300,
+      status: 'active',
+      started_at: new Date().toISOString(),
+      ended_at: null,
+      last_cadence_change: null,
+    });
 
     if (!race) return;
 
-    const participantsToInsert = config.participants.map((p) => ({
-      race_id: race.id,
-      name: p.name,
-      team_id: p.teamId || null,
-      total_distance_in_cadence: 0,
-      current_cadence: 0,
-      is_in_cadence: false,
-    }));
-
-    await supabase.from('participants').insert(participantsToInsert);
+    for (const p of config.participants) {
+      await wsClient.createParticipant({
+        race_id: race.id,
+        name: p.name,
+        team_id: p.teamId || null,
+        ws_connection_id: null,
+        total_distance_in_cadence: 0,
+        current_cadence: 0,
+        is_in_cadence: false,
+      });
+    }
 
     navigate(`/race/${race.id}`);
   };

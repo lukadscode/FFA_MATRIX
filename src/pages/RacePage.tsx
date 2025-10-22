@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { RaceDisplay } from '../components/RaceDisplay';
-import { supabase, Race } from '../lib/supabase';
+import { Race } from '../lib/types';
 import { RaceConfig } from '../components/RaceSetup';
 
 export const RacePage = () => {

@@ -1,4 +1,4 @@
-import { Participant } from '../lib/supabase';
+import { Participant } from '../lib/types';
 import { Trophy, Medal, Award } from 'lucide-react';
 
 type RaceResultsProps = {

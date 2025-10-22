@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { RaceResults } from '../components/RaceResults';
-import { supabase, Participant, Race } from '../lib/supabase';
+import { Participant, Race } from '../lib/types';
+import { wsClient } from '../lib/websocket';
 
 export const ResultsPage = () => {
   const { raceId } = useParams<{ raceId: string }>();
@@ -22,9 +23,9 @@ export const ResultsPage = () => {
   const loadResults = async () => {
     if (!raceId) return;
 
-    const [{ data: raceData }, { data: participantsData }] = await Promise.all([
-      supabase.from('races').select('*').eq('id', raceId).single(),
-      supabase.from('participants').select('*').eq('race_id', raceId),
+    const [raceData, participantsData] = await Promise.all([
+      wsClient.getRace(raceId),
+      wsClient.getParticipants(raceId),
     ]);
 
     if (raceData) {

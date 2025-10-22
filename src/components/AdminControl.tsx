@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, Race } from '../lib/supabase';
+import { Race } from '../lib/types';
 import { Activity, Plus, Minus, Monitor, ArrowLeft } from 'lucide-react';
 
 type AdminControlProps = {
@@ -31,7 +31,7 @@ export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) =>
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      // supabase.removeChannel(channel);
     };
   }, [raceId]);
 

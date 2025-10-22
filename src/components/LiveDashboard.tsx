@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, Race } from '../lib/supabase';
+import { Race } from '../lib/types';
 import { Activity, Settings, Plus, Minus } from 'lucide-react';
 
 type LiveDashboardProps = {
@@ -31,7 +31,7 @@ export const LiveDashboard = ({ raceId, onCadenceChange }: LiveDashboardProps) =
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      // supabase.removeChannel(channel);
     };
   }, [raceId]);
 

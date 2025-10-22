@@ -1,4 +1,4 @@
-import { Participant } from '../lib/supabase';
+import { Participant } from '../lib/types';
 import { Activity, Users, Trophy } from 'lucide-react';
 
 type ParticipantCardProps = {
