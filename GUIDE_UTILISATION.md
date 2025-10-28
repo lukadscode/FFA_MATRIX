@@ -2,37 +2,24 @@
 
 ## 🚀 Démarrage du Système
 
-### Étape 1 : Démarrer le serveur WebSocket
-
-Ouvrez un premier terminal et exécutez :
-
-```bash
-cd server
-npm install  # (uniquement la première fois)
-npm start
-```
-
-Vous devriez voir :
-```
-🚀 WebSocket server running on ws://localhost:8080
-```
-
-### Étape 2 : Démarrer ErgRace
+### Étape 1 : Démarrer ErgRace
 
 1. Lancez **ErgRace** sur votre ordinateur
 2. Configurez les rameurs (PM5) connectés
 3. Dans ErgRace, allez dans les paramètres de diffusion WebSocket
-4. Assurez-vous que le port est configuré (par défaut : 443 pour le premier rameur, 444 pour le second, etc.)
+4. Assurez-vous que le port WebSocket principal est **443** (par défaut)
 
-### Étape 3 : Démarrer l'application web
+### Étape 2 : Démarrer l'application web
 
-Ouvrez un second terminal et exécutez :
+Ouvrez un terminal et exécutez :
 
 ```bash
 npm run dev
 ```
 
 L'application sera accessible sur `http://localhost:5173`
+
+**✅ C'est tout !** Plus besoin de serveur WebSocket séparé, l'application se connecte directement à ErgRace sur le port 443.
 
 ---
 

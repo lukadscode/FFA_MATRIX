@@ -14,114 +14,99 @@ export const useErgRaceWebSocket = (
   onData: OnDataCallback,
   isActive: boolean
 ) => {
-  const websocketsRef = useRef<WebSocket[]>([]);
+  const wsRef = useRef<WebSocket | null>(null);
   const [connectionStates, setConnectionStates] = useState<string[]>(
     Array(participantCount).fill('DISCONNECTED')
   );
 
-  const parseErgRaceMessage = useCallback((message: string, lane: number): PM5Data | null => {
+  const parseErgRaceMessage = useCallback((message: string): void => {
     try {
-      if (!message || message === '{}') return null;
+      if (!message || message === '{}') return;
 
       const data = JSON.parse(message);
 
       if (data.race_data && data.race_data.data) {
-        const laneData = data.race_data.data.find((d: { lane: number }) => d.lane === lane + 1);
-        if (laneData && laneData.spm !== undefined) {
-          return {
-            cadence: parseInt(laneData.spm),
-            distance: laneData.meters ? parseInt(laneData.meters) : undefined,
-            time: laneData.time ? parseInt(laneData.time) : undefined,
-            power: laneData.watts ? parseInt(laneData.watts) : undefined,
-          };
-        }
-      }
+        data.race_data.data.forEach((laneData: { lane: number; spm: number; meters?: number; time?: number; watts?: number }) => {
+          if (laneData.spm !== undefined) {
+            const participantIndex = laneData.lane - 1;
 
-      if (data.SPM !== undefined) {
-        return {
-          cadence: parseInt(data.SPM),
-          distance: data.Distance ? parseInt(data.Distance) : undefined,
-          time: data.Time ? parseInt(data.Time) : undefined,
-          power: data.Watts ? parseInt(data.Watts) : undefined,
-        };
+            if (participantIndex >= 0 && participantIndex < participantCount) {
+              onData(
+                {
+                  cadence: parseInt(String(laneData.spm)),
+                  distance: laneData.meters ? parseInt(String(laneData.meters)) : undefined,
+                  time: laneData.time ? parseInt(String(laneData.time)) : undefined,
+                  power: laneData.watts ? parseInt(String(laneData.watts)) : undefined,
+                },
+                participantIndex
+              );
+            }
+          }
+        });
       }
-
-      return null;
-    } catch {
-      return null;
+    } catch (error) {
+      console.error('Error parsing ErgRace message:', error);
     }
-  }, []);
+  }, [onData, participantCount]);
 
-  const connectWebSocket = useCallback((index: number, port: number = 443 + index) => {
+  const connectWebSocket = useCallback(() => {
+    if (!isActive) return;
+
     try {
-      const wsUri = `ws://localhost:${port}`;
-      const ws = new WebSocket(wsUri);
+      const ws = new WebSocket('ws://localhost:443');
 
       ws.onopen = () => {
-        setConnectionStates(prev => {
-          const newStates = [...prev];
-          newStates[index] = 'CONNECTED';
-          return newStates;
-        });
+        console.log('✅ Connected to ErgRace on port 443');
+        setConnectionStates(Array(participantCount).fill('CONNECTED'));
       };
 
       ws.onclose = () => {
-        setConnectionStates(prev => {
-          const newStates = [...prev];
-          newStates[index] = 'DISCONNECTED';
-          return newStates;
-        });
+        console.log('❌ Disconnected from ErgRace');
+        setConnectionStates(Array(participantCount).fill('DISCONNECTED'));
+
+        if (isActive) {
+          setTimeout(connectWebSocket, 2000);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ ErgRace WebSocket error:', error);
+        setConnectionStates(Array(participantCount).fill('ERROR'));
       };
 
       ws.onmessage = (evt) => {
-        const parsedData = parseErgRaceMessage(evt.data, index);
-        if (parsedData && parsedData.cadence !== undefined) {
-          onData(parsedData, index);
-        }
+        parseErgRaceMessage(evt.data);
       };
 
-      ws.onerror = () => {
-        setConnectionStates(prev => {
-          const newStates = [...prev];
-          newStates[index] = 'ERROR';
-          return newStates;
-        });
-      };
-
-      websocketsRef.current[index] = ws;
+      wsRef.current = ws;
     } catch (error) {
-      console.error(`Error connecting WebSocket ${index}:`, error);
-      setConnectionStates(prev => {
-        const newStates = [...prev];
-        newStates[index] = 'ERROR';
-        return newStates;
-      });
+      console.error('Error connecting to ErgRace WebSocket:', error);
+      setConnectionStates(Array(participantCount).fill('ERROR'));
+
+      if (isActive) {
+        setTimeout(connectWebSocket, 2000);
+      }
     }
-  }, [onData, parseErgRaceMessage]);
+  }, [isActive, participantCount, parseErgRaceMessage]);
 
   useEffect(() => {
-    if (!isActive) return;
-
-    for (let i = 0; i < participantCount; i++) {
-      connectWebSocket(i);
+    if (isActive && participantCount > 0) {
+      connectWebSocket();
     }
 
     return () => {
-      websocketsRef.current.forEach(ws => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.close();
-        }
-      });
-      websocketsRef.current = [];
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
   }, [participantCount, isActive, connectWebSocket]);
 
-  const reconnect = useCallback((index: number) => {
-    const ws = websocketsRef.current[index];
-    if (ws) {
-      ws.close();
+  const reconnect = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
     }
-    setTimeout(() => connectWebSocket(index), 500);
+    setTimeout(connectWebSocket, 500);
   }, [connectWebSocket]);
 
   return {
