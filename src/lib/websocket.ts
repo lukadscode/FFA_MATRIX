@@ -172,6 +172,22 @@ class WebSocketClient {
     });
   }
 
+  async getAllRaces(): Promise<Race[]> {
+    return new Promise((resolve) => {
+      const unsubscribe = this.subscribe('allRaces', (message) => {
+        unsubscribe();
+        resolve(message.data as Race[]);
+      });
+
+      this.send({ type: 'getAllRaces' });
+
+      setTimeout(() => {
+        unsubscribe();
+        resolve([]);
+      }, 5000);
+    });
+  }
+
   async updateParticipant(id: string, updates: Partial<Participant>): Promise<Participant | null> {
     return new Promise((resolve) => {
       const unsubscribe = this.subscribe('participantUpdated', (message) => {
