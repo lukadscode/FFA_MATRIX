@@ -45,15 +45,17 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
       const lastDistance = lastDistanceRef.current.get(participant.id);
       let newTotalDistance = participant.total_distance_in_cadence;
 
-      if (isInCadence && !wasInCadence) {
-        newTotalDistance += 1;
-        lastDistanceRef.current.set(participant.id, currentDistance);
-        isInCadenceRef.current.set(participant.id, true);
-      } else if (isInCadence && wasInCadence && lastDistance !== undefined) {
-        const strokeDistance = Math.floor(Math.abs(currentDistance - lastDistance));
-        if (strokeDistance > 0) {
-          newTotalDistance += strokeDistance;
+      if (isInCadence) {
+        if (!wasInCadence) {
+          newTotalDistance += 1;
           lastDistanceRef.current.set(participant.id, currentDistance);
+          isInCadenceRef.current.set(participant.id, true);
+        } else if (lastDistance !== undefined) {
+          const strokeDistance = Math.floor(Math.abs(currentDistance - lastDistance));
+          if (strokeDistance > 0) {
+            newTotalDistance += strokeDistance;
+            lastDistanceRef.current.set(participant.id, currentDistance);
+          }
         }
       } else if (!isInCadence && wasInCadence) {
         isInCadenceRef.current.set(participant.id, false);
