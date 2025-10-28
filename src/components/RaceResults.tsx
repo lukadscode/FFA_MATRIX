@@ -13,7 +13,7 @@ export const RaceResults = ({ participants, mode, race, onNewRace }: RaceResults
   const getSortedResults = () => {
     if (mode === 'solo') {
       return [...participants].sort(
-        (a, b) => b.total_distance_in_cadence - a.total_distance_in_cadence
+        (a, b) => b.cumulative_distance - a.cumulative_distance
       );
     } else {
       const teams = new Map<number, Participant[]>();
@@ -29,7 +29,7 @@ export const RaceResults = ({ participants, mode, race, onNewRace }: RaceResults
       const teamResults = Array.from(teams.entries()).map(([teamId, members]) => ({
         teamId,
         members,
-        distance: Math.min(...members.map(m => m.total_distance_in_cadence)),
+        distance: Math.min(...members.map(m => m.cumulative_distance)),
       }));
 
       return teamResults.sort((a, b) => b.distance - a.distance);
@@ -93,10 +93,10 @@ export const RaceResults = ({ participants, mode, race, onNewRace }: RaceResults
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold text-green-400 font-mono">
-                    {participant.total_distance_in_cadence}m
+                    {participant.cumulative_distance}m
                   </div>
                   <div className="text-sm text-green-300 font-mono">
-                    IN TARGET CADENCE
+                    DISTANCE TOTALE
                   </div>
                 </div>
               </div>
@@ -126,7 +126,7 @@ export const RaceResults = ({ participants, mode, race, onNewRace }: RaceResults
                         {team.distance}m
                       </div>
                       <div className="text-sm text-green-300 font-mono">
-                        SYNCHRONIZED DISTANCE
+                        DISTANCE TOTALE
                       </div>
                     </div>
                   </div>
@@ -138,7 +138,7 @@ export const RaceResults = ({ participants, mode, race, onNewRace }: RaceResults
                       >
                         <span className="text-green-300 font-mono">{member.name}</span>
                         <span className="text-green-400 font-mono">
-                          {member.total_distance_in_cadence}m individual
+                          {member.cumulative_distance}m individual
                         </span>
                       </div>
                     ))}
