@@ -19,14 +19,13 @@ type RaceDisplayProps = {
 
 export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: RaceDisplayProps) => {
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [timeRemaining, setTimeRemaining] = useState(300);
   const [race, setRace] = useState<Race | null>(null);
   const [showCadenceNotification, setShowCadenceNotification] = useState(false);
   const [raceStarted, setRaceStarted] = useState(false);
   const lastDistanceRef = useRef<Map<string, number>>(new Map());
   const isInCadenceRef = useRef<Map<string, boolean>>(new Map());
   const lastCadenceChangeRef = useRef<string | null>(null);
-  const { raceStatus } = useErgRaceStatus();
+  const { raceStatus, raceData } = useErgRaceStatus();
 
   const handlePM5Data = useCallback(
     async (data: PM5Data, participantIndex: number) => {
@@ -142,22 +141,6 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
     }
   }, [raceStatus, raceStarted]);
 
-  useEffect(() => {
-    if (!raceStarted) return;
-
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleRaceEnd();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [raceStarted]);
 
   const handleRaceEnd = async () => {
     onRaceComplete();
@@ -281,9 +264,11 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
           <div className="text-2xl font-mono text-green-300 mt-2">
             PLAGE: {currentTargetCadence - currentTolerance} - {currentTargetCadence + currentTolerance} SPM
           </div>
-          <div className="text-5xl font-mono text-green-400 mt-4 font-bold">
-            {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
-          </div>
+          {raceData && (
+            <div className="text-5xl font-mono text-green-400 mt-4 font-bold">
+              {Math.floor(raceData.time / 60000)}:{Math.floor((raceData.time % 60000) / 1000).toString().padStart(2, '0')}
+            </div>
+          )}
         </div>
 
         {config.mode === 'solo' ? renderSoloMode() : renderTeamMode()}
