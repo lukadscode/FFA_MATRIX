@@ -244,17 +244,23 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
         <Settings className="w-6 h-6" />
       </button>
 
-      {raceStatus && raceStatus.state_desc && (
+      {raceStatus && raceStatus.state_desc && !raceStarted && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/90 backdrop-blur-sm pointer-events-none">
           <div className="text-center">
             <div className="text-9xl font-bold text-green-400 font-mono mb-8 animate-pulse tracking-wider">
               {raceStatus.state_desc.toUpperCase()}
             </div>
-            {!raceStarted && (
-              <div className="text-5xl text-yellow-400 font-mono animate-pulse">
-                ⏳ EN ATTENTE DU DÉPART...
-              </div>
-            )}
+            <div className="text-5xl text-yellow-400 font-mono animate-pulse">
+              ⏳ EN ATTENTE DU DÉPART...
+            </div>
+          </div>
+        </div>
+      )}
+
+      {raceStatus && raceStatus.state_desc && raceStarted && (
+        <div className="fixed top-4 left-4 z-40 bg-black/80 border-2 border-cyan-400 rounded-lg p-3 backdrop-blur-sm">
+          <div className="text-cyan-400 font-mono text-sm">
+            📍 ErgRace: <span className="font-bold">{raceStatus.state_desc.toUpperCase()}</span>
           </div>
         </div>
       )}
