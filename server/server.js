@@ -1,4 +1,4 @@
-import { WebSocketServer } from 'ws';
+import { WebSocketServer } from "ws";
 import {
   getRace,
   getActiveRace,
@@ -12,10 +12,10 @@ import {
   updateParticipant,
   deleteParticipants,
   createCadenceEvent,
-  getCadenceEvents
-} from './database.js';
+  getCadenceEvents,
+} from "./database.js";
 
-const WS_PORT = 8080;
+const WS_PORT = 8081;
 const wss = new WebSocketServer({ port: WS_PORT });
 
 const clients = new Set();
@@ -24,7 +24,7 @@ console.log(`🚀 WebSocket server running on ws://localhost:${WS_PORT}`);
 
 function broadcast(message, excludeClient = null) {
   const data = JSON.stringify(message);
-  clients.forEach(client => {
+  clients.forEach((client) => {
     if (client !== excludeClient && client.readyState === 1) {
       client.send(data);
     }
@@ -34,119 +34,144 @@ function broadcast(message, excludeClient = null) {
 function convertDbBooleans(obj) {
   if (!obj) return obj;
   const converted = { ...obj };
-  if ('is_in_cadence' in converted) {
+  if ("is_in_cadence" in converted) {
     converted.is_in_cadence = Boolean(converted.is_in_cadence);
   }
-  if ('was_in_cadence' in converted) {
+  if ("was_in_cadence" in converted) {
     converted.was_in_cadence = Boolean(converted.was_in_cadence);
   }
   return converted;
 }
 
-wss.on('connection', (ws) => {
-  console.log('✅ New client connected');
+wss.on("connection", (ws) => {
+  console.log("✅ New client connected");
   clients.add(ws);
 
-  ws.send(JSON.stringify({
-    type: 'connected',
-    message: 'Connected to race server'
-  }));
+  ws.send(
+    JSON.stringify({
+      type: "connected",
+      message: "Connected to race server",
+    })
+  );
 
-  ws.on('message', (message) => {
+  ws.on("message", (message) => {
     try {
       const data = JSON.parse(message.toString());
-      console.log('📨 Received:', data.type);
+      console.log("📨 Received:", data.type);
 
       let response = null;
       let broadcastMessage = null;
 
       switch (data.type) {
-        case 'getRace': {
+        case "getRace": {
           const race = getRace(data.id);
-          response = { type: 'race', data: race };
+          response = { type: "race", data: race };
           break;
         }
 
-        case 'getActiveRace': {
+        case "getActiveRace": {
           const race = getActiveRace();
-          response = { type: 'activeRace', data: race };
+          response = { type: "activeRace", data: race };
           break;
         }
 
-        case 'getAllRaces': {
+        case "getAllRaces": {
           const races = getAllRaces();
-          response = { type: 'allRaces', data: races };
+          response = { type: "allRaces", data: races };
           break;
         }
 
-        case 'createRace': {
+        case "createRace": {
           const race = createRace(data.race);
-          response = { type: 'raceCreated', data: race };
-          broadcastMessage = { type: 'raceUpdate', data: race };
+          response = { type: "raceCreated", data: race };
+          broadcastMessage = { type: "raceUpdate", data: race };
           break;
         }
 
-        case 'updateRace': {
+        case "updateRace": {
           const race = updateRace(data.id, data.updates);
-          response = { type: 'raceUpdated', data: race };
-          broadcastMessage = { type: 'raceUpdate', data: race };
+          response = { type: "raceUpdated", data: race };
+          broadcastMessage = { type: "raceUpdate", data: race };
           break;
         }
 
-        case 'deleteRace': {
+        case "deleteRace": {
           deleteRace(data.id);
-          response = { type: 'raceDeleted', id: data.id };
-          broadcastMessage = { type: 'raceDeleted', id: data.id };
+          response = { type: "raceDeleted", id: data.id };
+          broadcastMessage = { type: "raceDeleted", id: data.id };
           break;
         }
 
-        case 'getParticipants': {
-          const participants = getParticipants(data.raceId).map(convertDbBooleans);
-          response = { type: 'participants', data: participants };
+        case "getParticipants": {
+          const participants = getParticipants(data.raceId).map(
+            convertDbBooleans
+          );
+          response = { type: "participants", data: participants };
           break;
         }
 
-        case 'createParticipant': {
+        case "createParticipant": {
           const participant = createParticipant(data.participant);
-          response = { type: 'participantCreated', data: convertDbBooleans(participant) };
-          broadcastMessage = { type: 'participantUpdate', data: convertDbBooleans(participant) };
+          response = {
+            type: "participantCreated",
+            data: convertDbBooleans(participant),
+          };
+          broadcastMessage = {
+            type: "participantUpdate",
+            data: convertDbBooleans(participant),
+          };
           break;
         }
 
-        case 'updateParticipant': {
+        case "updateParticipant": {
           const participant = updateParticipant(data.id, data.updates);
-          response = { type: 'participantUpdated', data: convertDbBooleans(participant) };
-          broadcastMessage = { type: 'participantUpdate', data: convertDbBooleans(participant) };
+          response = {
+            type: "participantUpdated",
+            data: convertDbBooleans(participant),
+          };
+          broadcastMessage = {
+            type: "participantUpdate",
+            data: convertDbBooleans(participant),
+          };
           break;
         }
 
-        case 'deleteParticipants': {
+        case "deleteParticipants": {
           deleteParticipants(data.raceId);
-          response = { type: 'participantsDeleted', raceId: data.raceId };
-          broadcastMessage = { type: 'participantsDeleted', raceId: data.raceId };
+          response = { type: "participantsDeleted", raceId: data.raceId };
+          broadcastMessage = {
+            type: "participantsDeleted",
+            raceId: data.raceId,
+          };
           break;
         }
 
-        case 'createCadenceEvent': {
+        case "createCadenceEvent": {
           const event = createCadenceEvent(data.event);
-          response = { type: 'cadenceEventCreated', data: convertDbBooleans(event) };
-          broadcastMessage = { type: 'cadenceEventUpdate', data: convertDbBooleans(event) };
+          response = {
+            type: "cadenceEventCreated",
+            data: convertDbBooleans(event),
+          };
+          broadcastMessage = {
+            type: "cadenceEventUpdate",
+            data: convertDbBooleans(event),
+          };
           break;
         }
 
-        case 'getCadenceEvents': {
+        case "getCadenceEvents": {
           const events = getCadenceEvents(data.raceId).map(convertDbBooleans);
-          response = { type: 'cadenceEvents', data: events };
+          response = { type: "cadenceEvents", data: events };
           break;
         }
 
-        case 'subscribe': {
-          response = { type: 'subscribed', channel: data.channel };
+        case "subscribe": {
+          response = { type: "subscribed", channel: data.channel };
           break;
         }
 
         default:
-          response = { type: 'error', message: 'Unknown message type' };
+          response = { type: "error", message: "Unknown message type" };
       }
 
       if (response) {
@@ -156,30 +181,31 @@ wss.on('connection', (ws) => {
       if (broadcastMessage) {
         broadcast(broadcastMessage, ws);
       }
-
     } catch (error) {
-      console.error('❌ Error processing message:', error);
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: error.message
-      }));
+      console.error("❌ Error processing message:", error);
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: error.message,
+        })
+      );
     }
   });
 
-  ws.on('close', () => {
-    console.log('👋 Client disconnected');
+  ws.on("close", () => {
+    console.log("👋 Client disconnected");
     clients.delete(ws);
   });
 
-  ws.on('error', (error) => {
-    console.error('❌ WebSocket error:', error);
+  ws.on("error", (error) => {
+    console.error("❌ WebSocket error:", error);
   });
 });
 
-process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down server...');
+process.on("SIGINT", () => {
+  console.log("\n🛑 Shutting down server...");
   wss.close(() => {
-    console.log('✅ Server closed');
+    console.log("✅ Server closed");
     process.exit(0);
   });
 });
