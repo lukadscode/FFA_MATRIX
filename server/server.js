@@ -15,13 +15,14 @@ import {
   getCadenceEvents,
 } from "./database.js";
 
+import { networkInterfaces } from 'os';
+
 const WS_PORT = 8081;
 const wss = new WebSocketServer({ port: WS_PORT, host: '0.0.0.0' });
 
 const clients = new Set();
 
 function getLocalIPAddress() {
-  const { networkInterfaces } = await import('os');
   const nets = networkInterfaces();
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
@@ -33,7 +34,7 @@ function getLocalIPAddress() {
   return 'localhost';
 }
 
-const localIP = await getLocalIPAddress();
+const localIP = getLocalIPAddress();
 console.log(`🚀 WebSocket server running on:`);
 console.log(`   - Local: ws://localhost:${WS_PORT}`);
 console.log(`   - Network: ws://${localIP}:${WS_PORT}`);
