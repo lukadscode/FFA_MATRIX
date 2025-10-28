@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export type RaceDefinition = {
   boats: Array<{
@@ -45,9 +45,7 @@ export const useErgRaceStatus = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
 
-  const connectToErgRace = () => {
-    if (!isEnabled) return;
-
+  const connectToErgRace = useCallback(() => {
     try {
       const ws = new WebSocket('ws://localhost:443');
 
@@ -59,9 +57,11 @@ export const useErgRaceStatus = () => {
       ws.onclose = () => {
         console.log('❌ Disconnected from ErgRace status');
         setIsConnected(false);
-        if (isEnabled) {
-          reconnectTimeoutRef.current = window.setTimeout(connectToErgRace, 2000);
-        }
+        reconnectTimeoutRef.current = window.setTimeout(() => {
+          if (isEnabled) {
+            connectToErgRace();
+          }
+        }, 2000);
       };
 
       ws.onerror = (error) => {
@@ -96,11 +96,13 @@ export const useErgRaceStatus = () => {
       wsRef.current = ws;
     } catch (error) {
       console.error('Failed to connect to ErgRace status:', error);
-      if (isEnabled) {
-        reconnectTimeoutRef.current = window.setTimeout(connectToErgRace, 2000);
-      }
+      reconnectTimeoutRef.current = window.setTimeout(() => {
+        if (isEnabled) {
+          connectToErgRace();
+        }
+      }, 2000);
     }
-  };
+  }, [isEnabled]);
 
   const connect = () => {
     setIsEnabled(true);
@@ -135,7 +137,7 @@ export const useErgRaceStatus = () => {
         wsRef.current.close();
       }
     };
-  }, [isEnabled]);
+  }, [isEnabled, connectToErgRace]);
 
   return {
     raceDefinition,
