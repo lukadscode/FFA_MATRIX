@@ -1,13 +1,15 @@
-import { Participant } from '../lib/types';
+import { Participant, Race } from '../lib/types';
 import { Trophy, Medal, Award } from 'lucide-react';
 
 type RaceResultsProps = {
   participants: Participant[];
   mode: 'solo' | 'team';
+  race: Race;
   onNewRace: () => void;
 };
 
-export const RaceResults = ({ participants, mode, onNewRace }: RaceResultsProps) => {
+export const RaceResults = ({ participants, mode, race, onNewRace }: RaceResultsProps) => {
+  const raceTimeSeconds = Math.round(race.duration_seconds / 100);
   const getSortedResults = () => {
     if (mode === 'solo') {
       return [...participants].sort(
@@ -49,12 +51,26 @@ export const RaceResults = ({ participants, mode, onNewRace }: RaceResultsProps)
     }
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="max-w-4xl w-full bg-black/80 border-2 border-green-400 rounded-lg p-8 backdrop-blur-sm shadow-2xl shadow-green-500/50">
-        <h1 className="text-5xl font-bold text-green-400 font-mono text-center mb-8 animate-pulse">
+        <h1 className="text-5xl font-bold text-green-400 font-mono text-center mb-4 animate-pulse">
           RACE COMPLETE
         </h1>
+        <div className="text-center mb-8">
+          <div className="text-2xl text-green-300 font-mono">
+            DURÉE: {formatTime(raceTimeSeconds)}
+          </div>
+          <div className="text-xl text-green-300 font-mono mt-2">
+            CADENCE CIBLE: {race.target_cadence} SPM (±{race.cadence_tolerance})
+          </div>
+        </div>
 
         <div className="space-y-4 mb-8">
           {mode === 'solo' ? (

@@ -51,7 +51,7 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
           lastDistanceRef.current.set(participant.id, currentDistance);
           isInCadenceRef.current.set(participant.id, true);
         } else if (lastDistance !== undefined) {
-          const strokeDistance = Math.floor(Math.abs(currentDistance - lastDistance));
+          const strokeDistance = Math.floor(Math.abs(currentDistance - lastDistance) / 10);
           if (strokeDistance > 0) {
             newTotalDistance += strokeDistance;
             lastDistanceRef.current.set(participant.id, currentDistance);

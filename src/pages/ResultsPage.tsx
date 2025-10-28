@@ -69,6 +69,7 @@ export const ResultsPage = () => {
     <RaceResults
       participants={participants}
       mode={race.mode}
+      race={race}
       onNewRace={() => navigate('/')}
     />
   );
