@@ -23,8 +23,9 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
   const [race, setRace] = useState<Race | null>(null);
   const [showCadenceNotification, setShowCadenceNotification] = useState(false);
   const [raceStarted, setRaceStarted] = useState(false);
-  const lastStrokeTimeRef = useRef<Map<string, number>>(new Map());
-  const consecutiveInCadenceRef = useRef<Map<string, number>>(new Map());
+  const firstStrokeDistanceRef = useRef<Map<string, number>>(new Map());
+  const baseDistanceOnEntryRef = useRef<Map<string, number>>(new Map());
+  const isInCadenceRef = useRef<Map<string, boolean>>(new Map());
   const lastCadenceChangeRef = useRef<string | null>(null);
   const { raceStatus } = useErgRaceStatus();
 
@@ -33,36 +34,32 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
       const participant = participants[participantIndex];
       if (!participant || data.cadence === undefined) return;
 
-      const now = Date.now();
       const cadence = data.cadence;
+      const currentDistance = data.distance || 0;
       const currentTargetCadence = race?.target_cadence ?? config.targetCadence;
       const currentTolerance = race?.cadence_tolerance ?? config.cadenceTolerance;
       const isInCadence =
         cadence >= (currentTargetCadence - currentTolerance) &&
         cadence <= (currentTargetCadence + currentTolerance);
 
-      let distanceGained = 0;
+      const wasInCadence = isInCadenceRef.current.get(participant.id) || false;
+      let newTotalDistance = participant.total_distance_in_cadence;
 
-      if (isInCadence) {
-        const lastStrokeTime = lastStrokeTimeRef.current.get(participant.id);
-        const consecutiveCount = consecutiveInCadenceRef.current.get(participant.id) || 0;
-
-        if (consecutiveCount === 0) {
-          distanceGained = 1;
-        } else if (lastStrokeTime) {
-          const timeDiff = (now - lastStrokeTime) / 1000;
-          distanceGained = Math.max(1, Math.round(timeDiff));
-        } else {
-          distanceGained = 1;
-        }
-
-        consecutiveInCadenceRef.current.set(participant.id, consecutiveCount + 1);
-        lastStrokeTimeRef.current.set(participant.id, now);
-      } else {
-        consecutiveInCadenceRef.current.set(participant.id, 0);
+      if (isInCadence && !wasInCadence) {
+        newTotalDistance += 1;
+        firstStrokeDistanceRef.current.set(participant.id, currentDistance);
+        baseDistanceOnEntryRef.current.set(participant.id, participant.total_distance_in_cadence);
+        isInCadenceRef.current.set(participant.id, true);
+      } else if (isInCadence && wasInCadence) {
+        const firstStrokeDistance = firstStrokeDistanceRef.current.get(participant.id) || currentDistance;
+        const baseDistance = baseDistanceOnEntryRef.current.get(participant.id) || participant.total_distance_in_cadence;
+        const distanceSinceFirstStroke = Math.floor(currentDistance - firstStrokeDistance);
+        newTotalDistance = baseDistance + 1 + distanceSinceFirstStroke;
+      } else if (!isInCadence && wasInCadence) {
+        isInCadenceRef.current.set(participant.id, false);
+        firstStrokeDistanceRef.current.delete(participant.id);
+        baseDistanceOnEntryRef.current.delete(participant.id);
       }
-
-      const newTotalDistance = participant.total_distance_in_cadence + distanceGained;
 
       setParticipants((prev) =>
         prev.map((p) =>
