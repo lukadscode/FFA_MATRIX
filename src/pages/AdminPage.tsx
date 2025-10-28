@@ -61,16 +61,11 @@ export const AdminPage = () => {
     );
   }
 
-  const handleEndRace = () => {
-    navigate(`/results/${raceId}`);
-  };
-
   return (
     <AdminControl
       raceId={raceId}
       raceName={race.name}
       onBack={() => navigate(`/race/${raceId}`)}
-      onEndRace={handleEndRace}
     />
   );
 };

@@ -17,7 +17,7 @@ type RaceSetupProps = {
 
 export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
   const navigate = useNavigate();
-  const { raceDefinition, raceStatus, isConnected, isEnabled, connect, disconnect } = useErgRaceStatus();
+  const { raceDefinition, raceStatus, isConnected } = useErgRaceStatus();
 
   const [raceName, setRaceName] = useState('Matrix Race');
   const [mode, setMode] = useState<'solo' | 'team'>('solo');
@@ -113,29 +113,6 @@ export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
             RACE SETUP
           </h1>
           <div className="flex gap-2">
-            {isEnabled ? (
-              <button
-                onClick={disconnect}
-                className={`flex items-center gap-2 px-4 py-2 border rounded transition-all ${
-                  isConnected
-                    ? 'bg-green-500/20 border-green-400 hover:bg-red-500/20 hover:border-red-400'
-                    : 'bg-yellow-500/20 border-yellow-400 animate-pulse'
-                }`}
-              >
-                <Radio className={`w-5 h-5 ${isConnected ? 'text-green-400' : 'text-yellow-400'}`} />
-                <span className={`font-mono font-bold ${isConnected ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {isConnected ? 'CONNECTÉ' : 'CONNEXION...'}
-                </span>
-              </button>
-            ) : (
-              <button
-                onClick={connect}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-500/20 border border-gray-400 rounded hover:bg-green-500/20 hover:border-green-400 transition-all"
-              >
-                <Radio className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-400 font-mono font-bold">SE CONNECTER</span>
-              </button>
-            )}
             <button
               onClick={() => navigate('/ergrace-logs')}
               className="flex items-center gap-2 px-4 py-2 bg-cyan-500/20 border border-cyan-400 rounded hover:bg-cyan-500/40 transition-all"

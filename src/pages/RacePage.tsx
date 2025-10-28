@@ -20,46 +20,25 @@ export const RacePage = () => {
     loadRace();
   }, [raceId]);
 
-  const loadRace = () => {
+  const loadRace = async () => {
     if (!raceId) return;
 
-    const raceDataStr = sessionStorage.getItem('currentRace');
-    if (!raceDataStr) {
-      navigate('/');
-      return;
+    const { data } = await supabase
+      .from('races')
+      .select('*')
+      .eq('id', raceId)
+      .single();
+
+    if (data) {
+      setRace(data);
+      setConfig({
+        name: data.name,
+        mode: data.mode,
+        targetCadence: data.target_cadence,
+        cadenceTolerance: data.cadence_tolerance,
+        participants: [],
+      });
     }
-
-    const raceData = JSON.parse(raceDataStr);
-    if (raceData.id !== raceId) {
-      navigate('/');
-      return;
-    }
-
-    setRace({
-      id: raceData.id,
-      name: raceData.name,
-      mode: raceData.mode,
-      target_cadence: raceData.target_cadence,
-      cadence_tolerance: raceData.cadence_tolerance,
-      duration_seconds: raceData.duration_seconds,
-      status: raceData.status,
-      started_at: raceData.started_at,
-      ended_at: null,
-      last_cadence_change: null,
-      created_at: raceData.started_at,
-    });
-
-    setConfig({
-      name: raceData.name,
-      mode: raceData.mode,
-      targetCadence: raceData.target_cadence,
-      cadenceTolerance: raceData.cadence_tolerance,
-      participants: raceData.participants.map((p: { name: string; teamId?: number }) => ({
-        name: p.name,
-        teamId: p.teamId,
-      })),
-    });
-
     setLoading(false);
   };
 
