@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Race } from '../lib/types';
 import { Activity, Plus, Minus, Monitor, ArrowLeft, StopCircle } from 'lucide-react';
-import { useSyncServer } from '../hooks/useSyncServer';
-
-const SYNC_SERVER_URL = 'ws://localhost:8080';
 
 type AdminControlProps = {
   raceId: string;
@@ -15,16 +12,6 @@ type AdminControlProps = {
 export const AdminControl = ({ raceId, raceName, onBack, onEndRace }: AdminControlProps) => {
   const [race, setRace] = useState<Race | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
-
-  const { send } = useSyncServer(SYNC_SERVER_URL, (message) => {
-    if (message.type === 'race_state' || message.type === 'race_updated') {
-      const raceData = message.data as Race;
-      if (raceData.id === raceId) {
-        setRace(raceData);
-        sessionStorage.setItem('currentRace', JSON.stringify(raceData));
-      }
-    }
-  });
 
   useEffect(() => {
     loadRace();
@@ -58,8 +45,15 @@ export const AdminControl = ({ raceId, raceName, onBack, onEndRace }: AdminContr
     const updatedRace = { ...race, target_cadence: newCadence, last_cadence_change: new Date().toISOString() };
     setRace(updatedRace);
 
-    sessionStorage.setItem('currentRace', JSON.stringify(updatedRace));
-    send({ type: 'update_race', data: updatedRace });
+    const raceDataStr = sessionStorage.getItem('currentRace');
+    if (raceDataStr) {
+      const raceData = JSON.parse(raceDataStr);
+      raceData.target_cadence = newCadence;
+      raceData.last_cadence_change = new Date().toISOString();
+      sessionStorage.setItem('currentRace', JSON.stringify(raceData));
+
+      window.dispatchEvent(new CustomEvent('raceConfigUpdated', { detail: raceData }));
+    }
   };
 
   const updateTolerance = (newTolerance: number) => {
@@ -69,8 +63,15 @@ export const AdminControl = ({ raceId, raceName, onBack, onEndRace }: AdminContr
     const updatedRace = { ...race, cadence_tolerance: validTolerance, last_cadence_change: new Date().toISOString() };
     setRace(updatedRace);
 
-    sessionStorage.setItem('currentRace', JSON.stringify(updatedRace));
-    send({ type: 'update_race', data: updatedRace });
+    const raceDataStr = sessionStorage.getItem('currentRace');
+    if (raceDataStr) {
+      const raceData = JSON.parse(raceDataStr);
+      raceData.cadence_tolerance = validTolerance;
+      raceData.last_cadence_change = new Date().toISOString();
+      sessionStorage.setItem('currentRace', JSON.stringify(raceData));
+
+      window.dispatchEvent(new CustomEvent('raceConfigUpdated', { detail: raceData }));
+    }
   };
 
   if (!race) return null;

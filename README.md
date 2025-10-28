@@ -1,6 +1,6 @@
-# 🚣 Application de Course d'Aviron - Mode Hors Ligne
+# Application de Course d'Aviron - Mode Hors Ligne
 
-Application de gestion de courses d'aviron avec synchronisation temps réel en local via WebSocket (sans BDD) + intégration complète ErgRace.
+Application de gestion de courses d'aviron avec synchronisation temps réel en local via WebSocket + SQLite + intégration ErgRace.
 
 ## 📋 Guides et Documentation
 
@@ -9,19 +9,19 @@ Application de gestion de courses d'aviron avec synchronisation temps réel en l
 
 ## 🏗️ Architecture
 
-- **Frontend**: React + TypeScript + Vite + Tailwind CSS
-- **Backend**: Node.js + WebSocket (ws) - Sync local uniquement
-- **Stockage**: sessionStorage (pas de BDD, données en session)
-- **Synchronisation**: WebSocket pour communication temps réel entre appareils
-- **Intégration ErgRace**: Connexion directe au port 443 (tous les participants)
+- **Frontend**: React + TypeScript + Vite
+- **Backend**: Node.js + WebSocket (ws)
+- **Base de données**: SQLite (locale)
+- **Synchronisation**: WebSocket pour communication temps réel entre écrans
+- **Intégration ErgRace**: Connexion directe aux PM5 via WebSocket (ports 443+)
 
-## 🌐 Fonctionnement 100% Local
+## 🌐 Fonctionnement Hors Ligne
 
-Cette application fonctionne **sans connexion internet et sans base de données** grâce à :
-- 🚫 **Aucune BDD** : Données stockées en sessionStorage
-- 🔄 **Serveur WebSocket local** : Synchronisation multi-appareils (port 8080)
-- 📡 **Connexion ErgRace unique** : Port 443 pour tous les participants
-- 📱 **Multi-appareils** : Contrôlez depuis tablette/téléphone sur le même WiFi
+Cette application fonctionne **100% en local sans connexion internet** grâce à :
+- Base de données SQLite stockée sur disque
+- Serveur WebSocket local sur le même réseau
+- Tous les écrans se connectent au serveur local
+- Réception directe des données ErgRace
 
 ## 📦 Installation
 
@@ -147,8 +147,8 @@ Si vous voulez accéder au serveur depuis d'autres appareils :
 
 ## 🔧 Ports Utilisés
 
-- **8080** : Serveur WebSocket de synchronisation local (multi-appareils)
-- **443** : Port ErgRace unique (tous les participants sur un seul WebSocket)
+- **8080** : Serveur WebSocket principal (synchronisation multi-écrans)
+- **443-452** : Ports ErgRace (un par rameur, jusqu'à 10 rameurs)
 - **5173** : Application web (dev)
 - **4173** : Application web (preview production)
 

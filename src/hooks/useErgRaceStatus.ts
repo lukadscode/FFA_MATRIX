@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { ERGRACE_CONFIG } from '../config/ergrace';
+import { useState, useEffect, useRef } from 'react';
 
 export type RaceDefinition = {
   boats: Array<{
@@ -46,32 +45,27 @@ export const useErgRaceStatus = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
 
-  const connectToErgRace = useCallback(() => {
+  const connectToErgRace = () => {
+    if (!isEnabled) return;
+
     try {
-      console.log(`🔌 Attempting to connect to ErgRace on port ${ERGRACE_CONFIG.PORT}...`);
-      const ws = new WebSocket(`ws://localhost:${ERGRACE_CONFIG.PORT}`);
+      const ws = new WebSocket('ws://localhost:443');
 
       ws.onopen = () => {
-        console.log(`✅ Connected to ErgRace status on port ${ERGRACE_CONFIG.PORT}`);
+        console.log('✅ Connected to ErgRace status on port 443');
         setIsConnected(true);
       };
 
       ws.onclose = () => {
         console.log('❌ Disconnected from ErgRace status');
         setIsConnected(false);
-        reconnectTimeoutRef.current = window.setTimeout(() => {
-          if (isEnabled) {
-            connectToErgRace();
-          }
-        }, 2000);
+        if (isEnabled) {
+          reconnectTimeoutRef.current = window.setTimeout(connectToErgRace, 2000);
+        }
       };
 
       ws.onerror = (error) => {
-        console.error(`❌ ErgRace connection error on port ${ERGRACE_CONFIG.PORT}:`, error);
-        console.error(`⚠️ Vérifiez que :`);
-        console.error(`   1. ErgRace est bien lancé`);
-        console.error(`   2. Le port ${ERGRACE_CONFIG.PORT} est le bon port (voir paramètres ErgRace)`);
-        console.error(`   3. Testez manuellement avec: new WebSocket('ws://localhost:${ERGRACE_CONFIG.PORT}')`);
+        console.error('❌ ErgRace status connection error:', error);
         setIsConnected(false);
       };
 
@@ -102,13 +96,11 @@ export const useErgRaceStatus = () => {
       wsRef.current = ws;
     } catch (error) {
       console.error('Failed to connect to ErgRace status:', error);
-      reconnectTimeoutRef.current = window.setTimeout(() => {
-        if (isEnabled) {
-          connectToErgRace();
-        }
-      }, 2000);
+      if (isEnabled) {
+        reconnectTimeoutRef.current = window.setTimeout(connectToErgRace, 2000);
+      }
     }
-  }, [isEnabled]);
+  };
 
   const connect = () => {
     setIsEnabled(true);
@@ -143,7 +135,7 @@ export const useErgRaceStatus = () => {
         wsRef.current.close();
       }
     };
-  }, [isEnabled, connectToErgRace]);
+  }, [isEnabled]);
 
   return {
     raceDefinition,

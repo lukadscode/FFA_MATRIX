@@ -1,12 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { RaceSetup, RaceConfig } from '../components/RaceSetup';
-import { useSyncServer } from '../hooks/useSyncServer';
-
-const SYNC_SERVER_URL = 'ws://localhost:8080';
 
 export const SetupPage = () => {
   const navigate = useNavigate();
-  const { send } = useSyncServer(SYNC_SERVER_URL);
 
   const handleStartRace = (config: RaceConfig) => {
     const raceId = crypto.randomUUID();
@@ -29,13 +25,6 @@ export const SetupPage = () => {
     };
 
     sessionStorage.setItem('currentRace', JSON.stringify(raceData));
-
-    send({ type: 'create_race', data: raceData });
-
-    raceData.participants.forEach((participant) => {
-      send({ type: 'add_participant', data: participant });
-    });
-
     navigate(`/race/${raceId}`);
   };
 

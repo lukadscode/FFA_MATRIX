@@ -1,5 +1,4 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { ERGRACE_CONFIG } from '../config/ergrace';
 
 export type PM5Data = {
   cadence?: number;
@@ -54,11 +53,10 @@ export const useErgRaceWebSocket = (
     if (!isActive) return;
 
     try {
-      console.log(`🔌 Connecting to ErgRace data stream on port ${ERGRACE_CONFIG.PORT}...`);
-      const ws = new WebSocket(`ws://localhost:${ERGRACE_CONFIG.PORT}`);
+      const ws = new WebSocket('ws://localhost:443');
 
       ws.onopen = () => {
-        console.log(`✅ Connected to ErgRace data stream on port ${ERGRACE_CONFIG.PORT}`);
+        console.log('✅ Connected to ErgRace on port 443');
         setConnectionStates(Array(participantCount).fill('CONNECTED'));
       };
 

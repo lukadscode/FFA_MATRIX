@@ -2,15 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Participant, Race } from '../lib/types';
 import { useErgRaceWebSocket, PM5Data } from '../hooks/useErgRaceWebSocket';
 import { useErgRaceStatus } from '../hooks/useErgRaceStatus';
-import { useSyncServer } from '../hooks/useSyncServer';
 import { ParticipantCard } from './ParticipantCard';
 import { TeamCard } from './TeamCard';
 import { RaceConfig } from './RaceSetup';
 import { CadenceChangeNotification } from './CadenceChangeNotification';
 import { playCadenceChangeSound } from '../utils/sound';
 import { Settings } from 'lucide-react';
-
-const SYNC_SERVER_URL = 'ws://localhost:8080';
 
 type RaceDisplayProps = {
   raceId: string;
@@ -29,33 +26,6 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
   const consecutiveInCadenceRef = useRef<Map<string, number>>(new Map());
   const lastCadenceChangeRef = useRef<string | null>(null);
   const { raceStatus } = useErgRaceStatus();
-
-  const { send } = useSyncServer(SYNC_SERVER_URL, (message) => {
-    if (message.type === 'race_state' || message.type === 'race_updated' || message.type === 'race_created') {
-      const raceData = message.data as Race;
-      if (raceData.id === raceId) {
-        if (lastCadenceChangeRef.current !== raceData.last_cadence_change) {
-          if (lastCadenceChangeRef.current !== null) {
-            playCadenceChangeSound();
-            setShowCadenceNotification(true);
-            setTimeout(() => setShowCadenceNotification(false), 5000);
-          }
-          lastCadenceChangeRef.current = raceData.last_cadence_change;
-        }
-        setRace(raceData);
-        sessionStorage.setItem('currentRace', JSON.stringify(raceData));
-      }
-    } else if (message.type === 'participant_updated') {
-      const updatedParticipant = message.data as Participant;
-      setParticipants((prev) =>
-        prev.map((p) => (p.id === updatedParticipant.id ? updatedParticipant : p))
-      );
-    } else if (message.type === 'race_ended') {
-      if (message.raceId === raceId) {
-        handleRaceEnd();
-      }
-    }
-  });
 
   const handlePM5Data = useCallback(
     async (data: PM5Data, participantIndex: number) => {
@@ -93,20 +63,20 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
 
       const newTotalDistance = participant.total_distance_in_cadence + distanceGained;
 
-      const updatedParticipant = {
-        ...participant,
-        current_cadence: cadence,
-        is_in_cadence: isInCadence,
-        total_distance_in_cadence: newTotalDistance,
-      };
-
       setParticipants((prev) =>
-        prev.map((p) => (p.id === participant.id ? updatedParticipant : p))
+        prev.map((p) =>
+          p.id === participant.id
+            ? {
+                ...p,
+                current_cadence: cadence,
+                is_in_cadence: isInCadence,
+                total_distance_in_cadence: newTotalDistance,
+              }
+            : p
+        )
       );
-
-      send({ type: 'update_participant', data: updatedParticipant });
     },
-    [participants, config, raceId, race, send]
+    [participants, config, raceId, race]
   );
 
   const { connectionStates } = useErgRaceWebSocket(
@@ -147,6 +117,39 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
         }))
       );
     }
+
+    const handleConfigUpdate = (event: CustomEvent) => {
+      const updatedData = event.detail;
+
+      if (lastCadenceChangeRef.current !== updatedData.last_cadence_change) {
+        if (lastCadenceChangeRef.current !== null) {
+          playCadenceChangeSound();
+          setShowCadenceNotification(true);
+          setTimeout(() => setShowCadenceNotification(false), 5000);
+        }
+        lastCadenceChangeRef.current = updatedData.last_cadence_change;
+      }
+
+      setRace({
+        id: updatedData.id,
+        name: updatedData.name,
+        mode: updatedData.mode,
+        target_cadence: updatedData.target_cadence,
+        cadence_tolerance: updatedData.cadence_tolerance,
+        duration_seconds: updatedData.duration_seconds,
+        status: updatedData.status,
+        started_at: updatedData.started_at,
+        ended_at: null,
+        last_cadence_change: updatedData.last_cadence_change,
+        created_at: updatedData.started_at,
+      });
+    };
+
+    window.addEventListener('raceConfigUpdated', handleConfigUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('raceConfigUpdated', handleConfigUpdate as EventListener);
+    };
   }, [raceId]);
 
   useEffect(() => {

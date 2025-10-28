@@ -9,29 +9,9 @@
 3. Dans ErgRace, allez dans les paramètres de diffusion WebSocket
 4. Assurez-vous que le port WebSocket principal est **443** (par défaut)
 
-### Étape 2 : Démarrer le serveur de synchronisation local
+### Étape 2 : Démarrer l'application web
 
-Ouvrez un premier terminal et exécutez :
-
-```bash
-cd server
-npm install  # (uniquement la première fois)
-npm start
-```
-
-Vous devriez voir :
-```
-🚀 Sync Server running on ws://0.0.0.0:8080
-📱 Other devices can connect to ws://YOUR_IP:8080
-```
-
-**💡 Trouvez votre adresse IP :**
-- Windows : `ipconfig`
-- Mac/Linux : `ifconfig` ou `ip addr`
-
-### Étape 3 : Démarrer l'application web
-
-Ouvrez un second terminal et exécutez :
+Ouvrez un terminal et exécutez :
 
 ```bash
 npm run dev
@@ -39,15 +19,7 @@ npm run dev
 
 L'application sera accessible sur `http://localhost:5173`
 
-### 📱 Accès depuis une tablette/téléphone
-
-Pour contrôler la course depuis un autre appareil sur le même réseau :
-
-1. Trouvez l'IP de votre ordinateur (ex: `192.168.1.10`)
-2. Sur votre tablette/téléphone, ouvrez : `http://192.168.1.10:5173`
-3. Vous pouvez maintenant contrôler la course depuis l'autre appareil !
-
-**⚠️ Important :** Tous les appareils doivent être sur le même réseau local (WiFi).
+**✅ C'est tout !** Plus besoin de serveur WebSocket séparé, l'application se connecte directement à ErgRace sur le port 443.
 
 ---
 
