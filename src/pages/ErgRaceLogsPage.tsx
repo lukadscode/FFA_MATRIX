@@ -36,22 +36,18 @@ export const ErgRaceLogsPage = () => {
   const navigate = useNavigate();
   const [logs, setLogs] = useState<ErgRaceLog[]>([]);
   const [raceStatus, setRaceStatus] = useState<RaceStatus | null>(null);
-  const [connections, setConnections] = useState<Record<number, string>>({});
+  const [connectionState, setConnectionState] = useState<string>('DISCONNECTED');
   const logsEndRef = useRef<HTMLDivElement>(null);
-  const websocketsRef = useRef<WebSocket[]>([]);
+  const websocketRef = useRef<WebSocket | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
   useEffect(() => {
-    for (let i = 0; i < 10; i++) {
-      connectToErgRace(i);
-    }
+    connectToErgRace();
 
     return () => {
-      websocketsRef.current.forEach(ws => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.close();
-        }
-      });
+      if (websocketRef.current && websocketRef.current.readyState === WebSocket.OPEN) {
+        websocketRef.current.close();
+      }
     };
   }, []);
 
@@ -61,26 +57,26 @@ export const ErgRaceLogsPage = () => {
     }
   }, [logs, autoScroll]);
 
-  const connectToErgRace = (lane: number) => {
-    const port = 443 + lane;
+  const connectToErgRace = () => {
+    const port = 443;
     const wsUri = `ws://localhost:${port}`;
 
     try {
       const ws = new WebSocket(wsUri);
 
       ws.onopen = () => {
-        setConnections(prev => ({ ...prev, [lane]: 'CONNECTED' }));
-        addLog(lane, `Connected to ErgRace on port ${port}`, 'connection');
+        setConnectionState('CONNECTED');
+        addLog(0, `Connected to ErgRace on port ${port}`, 'connection');
       };
 
       ws.onclose = () => {
-        setConnections(prev => ({ ...prev, [lane]: 'DISCONNECTED' }));
-        addLog(lane, `Disconnected from port ${port}`, 'connection');
+        setConnectionState('DISCONNECTED');
+        addLog(0, `Disconnected from port ${port}`, 'connection');
       };
 
       ws.onerror = () => {
-        setConnections(prev => ({ ...prev, [lane]: 'ERROR' }));
-        addLog(lane, `Connection error on port ${port}`, 'error');
+        setConnectionState('ERROR');
+        addLog(0, `Connection error on port ${port}`, 'error');
       };
 
       ws.onmessage = (evt) => {
@@ -90,24 +86,31 @@ export const ErgRaceLogsPage = () => {
           if (data.state !== undefined && data.state_desc !== undefined) {
             setRaceStatus(data);
             addLog(
-              lane,
+              0,
               `Race Status: ${data.state_desc.toUpperCase()} (State ${data.state})`,
               'status'
             );
+          } else if (data.race_data && data.race_data.data) {
+            data.race_data.data.forEach((laneData: any) => {
+              if (laneData.lane && laneData.spm !== undefined) {
+                const message = `SPM: ${laneData.spm}${laneData.meters ? `, Distance: ${laneData.meters}m` : ''}${laneData.time ? `, Time: ${Math.floor(laneData.time / 60)}:${(laneData.time % 60).toString().padStart(2, '0')}` : ''}${laneData.watts ? `, Power: ${laneData.watts}W` : ''}`;
+                addLog(laneData.lane - 1, message, 'data');
+              }
+            });
           } else if (data.SPM !== undefined) {
             const message = `SPM: ${data.SPM}${data.Distance ? `, Distance: ${data.Distance}m` : ''}${data.Time ? `, Time: ${Math.floor(data.Time / 60)}:${(data.Time % 60).toString().padStart(2, '0')}` : ''}${data.Watts ? `, Power: ${data.Watts}W` : ''}`;
-            addLog(lane, message, 'data');
+            addLog(0, message, 'data');
           } else {
-            addLog(lane, `Raw: ${evt.data}`, 'data');
+            addLog(0, `Raw: ${evt.data}`, 'data');
           }
         } catch (error) {
-          addLog(lane, `Parse error: ${evt.data}`, 'error');
+          addLog(0, `Parse error: ${evt.data}`, 'error');
         }
       };
 
-      websocketsRef.current[lane] = ws;
+      websocketRef.current = ws;
     } catch (error) {
-      addLog(lane, `Failed to connect to port ${port}`, 'error');
+      addLog(0, `Failed to connect to port ${port}`, 'error');
     }
   };
 
@@ -196,26 +199,18 @@ export const ErgRaceLogsPage = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
-          {Array.from({ length: 10 }).map((_, i) => {
-            const state = connections[i] || 'DISCONNECTED';
-            return (
-              <div
-                key={i}
-                className="bg-black/90 border border-green-400/50 rounded p-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold">Lane {i + 1}</span>
-                  <span className={`text-xs font-mono ${getConnectionColor(state)}`}>
-                    {state}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 font-mono mt-1">
-                  Port: {443 + i}
-                </div>
+        <div className="mb-6 bg-black/90 border border-green-400/50 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="font-mono font-bold text-lg">ERGRACE CONNECTION</span>
+              <div className="text-xs text-gray-400 font-mono mt-1">
+                Port: 443 (Toutes les lanes)
               </div>
-            );
-          })}
+            </div>
+            <span className={`text-lg font-mono font-bold ${getConnectionColor(connectionState)}`}>
+              {connectionState}
+            </span>
+          </div>
         </div>
 
         <div className="bg-black/90 border-2 border-green-400 rounded-lg p-4">
@@ -264,10 +259,11 @@ export const ErgRaceLogsPage = () => {
         <div className="mt-6 bg-green-500/10 border border-green-400/50 rounded-lg p-4">
           <h3 className="font-mono font-bold mb-2">ℹ️ INFORMATIONS</h3>
           <ul className="text-sm font-mono space-y-1 text-green-300">
-            <li>• Ports ErgRace: 443-452 (10 lanes max)</li>
+            <li>• Port ErgRace: 443 (une seule connexion pour toutes les lanes)</li>
             <li>• Types de messages: Données PM5, Statuts de course</li>
-            <li>• Les connexions se font automatiquement au chargement</li>
+            <li>• La connexion se fait automatiquement au chargement</li>
             <li>• Les logs s'accumulent en temps réel</li>
+            <li>• Les données de toutes les lanes sont reçues sur la même connexion</li>
           </ul>
         </div>
       </div>
