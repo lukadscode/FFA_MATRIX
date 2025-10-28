@@ -196,5 +196,6 @@ class WebSocketClient {
   }
 }
 
-const WS_URL = 'ws://localhost:8081';
+const WS_HOST = import.meta.env.VITE_WS_HOST || 'localhost';
+const WS_URL = `ws://${WS_HOST}:8081`;
 export const wsClient = new WebSocketClient(WS_URL);
