@@ -33,6 +33,7 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
       if (!participant || data.cadence === undefined) return;
 
       const cadence = data.cadence;
+      const currentDistance = data.distance || 0;
       const currentTargetCadence = race?.target_cadence ?? config.targetCadence;
       const currentTolerance = race?.cadence_tolerance ?? config.cadenceTolerance;
       const isInCadence =
@@ -40,19 +41,19 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
         cadence <= (currentTargetCadence + currentTolerance);
 
       const wasInCadence = isInCadenceRef.current.get(participant.id) || false;
-      const ergRaceDistance = raceData?.data[participantIndex]?.meters || 0;
       const lastDistance = lastDistanceRef.current.get(participant.id);
       let newTotalDistance = participant.total_distance_in_cadence;
 
       if (isInCadence) {
         if (!wasInCadence) {
-          lastDistanceRef.current.set(participant.id, ergRaceDistance);
+          newTotalDistance += 1;
+          lastDistanceRef.current.set(participant.id, currentDistance);
           isInCadenceRef.current.set(participant.id, true);
         } else if (lastDistance !== undefined) {
-          const distanceDelta = ergRaceDistance - lastDistance;
-          if (distanceDelta > 0) {
-            newTotalDistance += distanceDelta;
-            lastDistanceRef.current.set(participant.id, ergRaceDistance);
+          const strokeDistance = Math.floor(Math.abs(currentDistance - lastDistance) / 10);
+          if (strokeDistance > 0) {
+            newTotalDistance += strokeDistance;
+            lastDistanceRef.current.set(participant.id, currentDistance);
           }
         }
       } else if (!isInCadence && wasInCadence) {
@@ -73,7 +74,7 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
         )
       );
     },
-    [participants, config, raceId, race, raceData]
+    [participants, config, raceId, race]
   );
 
   const { connectionStates } = useErgRaceWebSocket(
