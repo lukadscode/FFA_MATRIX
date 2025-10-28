@@ -67,7 +67,11 @@ export const useErgRaceStatus = () => {
       };
 
       ws.onerror = (error) => {
-        console.error('❌ ErgRace status connection error:', error);
+        console.error(`❌ ErgRace connection error on port ${ERGRACE_CONFIG.PORT}:`, error);
+        console.error(`⚠️ Vérifiez que :`);
+        console.error(`   1. ErgRace est bien lancé`);
+        console.error(`   2. Le port ${ERGRACE_CONFIG.PORT} est le bon port (voir paramètres ErgRace)`);
+        console.error(`   3. Testez manuellement avec: new WebSocket('ws://localhost:${ERGRACE_CONFIG.PORT}')`);
         setIsConnected(false);
       };
 
