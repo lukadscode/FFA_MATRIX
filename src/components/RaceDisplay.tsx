@@ -164,7 +164,7 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
               key={participant.id}
               participant={participant}
               mode="solo"
-              timeRemaining={timeRemaining}
+              timeRemaining={0}
               connectionState={connectionStates[originalIndex] || 'DISCONNECTED'}
               rank={rankIndex + 1}
             />
@@ -205,7 +205,7 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
               key={teamId}
               teamId={teamId}
               participants={teamMembers}
-              timeRemaining={timeRemaining}
+              timeRemaining={0}
               connectionStates={teamConnectionStates}
               rank={rankIndex + 1}
             />
