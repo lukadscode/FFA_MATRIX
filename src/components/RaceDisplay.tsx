@@ -8,6 +8,7 @@ import { RaceConfig } from './RaceSetup';
 import { CadenceChangeNotification } from './CadenceChangeNotification';
 import { playCadenceChangeSound } from '../utils/sound';
 import { Settings } from 'lucide-react';
+import { wsClient } from '../lib/websocket';
 
 type RaceDisplayProps = {
   raceId: string;
@@ -87,11 +88,7 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
 
   useEffect(() => {
     const loadRace = async () => {
-      const { data } = await supabase
-        .from('races')
-        .select('*')
-        .eq('id', raceId)
-        .single();
+      const data = await wsClient.getRace(raceId);
 
       if (data) {
         if (lastCadenceChangeRef.current !== data.last_cadence_change) {
@@ -107,12 +104,7 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
     };
 
     const loadParticipants = async () => {
-      const { data } = await supabase
-        .from('participants')
-        .select('*')
-        .eq('race_id', raceId)
-        .order('created_at');
-
+      const data = await wsClient.getParticipants(raceId);
       if (data) {
         setParticipants(data);
       }
@@ -121,41 +113,22 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
     loadRace();
     loadParticipants();
 
-    const raceChannel = supabase
-      .channel(`race_updates_${raceId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'races',
-          filter: `id=eq.${raceId}`,
-        },
-        () => {
-          loadRace();
-        }
-      )
-      .subscribe();
+    const unsubRace = wsClient.subscribe('raceUpdate', (message) => {
+      if (message.data && (message.data as Race).id === raceId) {
+        loadRace();
+      }
+    });
 
-    const participantsChannel = supabase
-      .channel(`participants_${raceId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'participants',
-          filter: `race_id=eq.${raceId}`,
-        },
-        () => {
-          loadParticipants();
-        }
-      )
-      .subscribe();
+    const unsubParticipant = wsClient.subscribe('participantUpdate', (message) => {
+      const participant = message.data as Participant;
+      if (participant && participant.race_id === raceId) {
+        loadParticipants();
+      }
+    });
 
     return () => {
-      // supabase.removeChannel(raceChannel);
-      // supabase.removeChannel(participantsChannel);
+      unsubRace();
+      unsubParticipant();
     };
   }, [raceId]);
 

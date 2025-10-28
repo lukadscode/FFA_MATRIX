@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminControl } from '../components/AdminControl';
 import { Race } from '../lib/types';
+import { wsClient } from '../lib/websocket';
 
 export const AdminPage = () => {
   const { raceId } = useParams<{ raceId: string }>();
@@ -21,11 +22,7 @@ export const AdminPage = () => {
   const loadRace = async () => {
     if (!raceId) return;
 
-    const { data } = await supabase
-      .from('races')
-      .select('*')
-      .eq('id', raceId)
-      .single();
+    const data = await wsClient.getRace(raceId);
 
     if (data) {
       setRace(data);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Race } from '../lib/types';
 import { Activity, Plus, Minus, Monitor, ArrowLeft } from 'lucide-react';
+import { wsClient } from '../lib/websocket';
 
 type AdminControlProps = {
   raceId: string;
@@ -14,34 +15,19 @@ export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) =>
   useEffect(() => {
     loadRace();
 
-    const channel = supabase
-      .channel(`admin_${raceId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'races',
-          filter: `id=eq.${raceId}`,
-        },
-        () => {
-          loadRace();
-        }
-      )
-      .subscribe();
+    const unsubscribe = wsClient.subscribe('raceUpdate', (message) => {
+      if (message.data && (message.data as Race).id === raceId) {
+        loadRace();
+      }
+    });
 
     return () => {
-      // supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [raceId]);
 
   const loadRace = async () => {
-    const { data } = await supabase
-      .from('races')
-      .select('*')
-      .eq('id', raceId)
-      .single();
-
+    const data = await wsClient.getRace(raceId);
     if (data) {
       setRace(data);
     }
@@ -52,16 +38,13 @@ export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) =>
 
     setRace({ ...race, target_cadence: newCadence });
 
-    const { error } = await supabase
-      .from('races')
-      .update({
-        target_cadence: newCadence,
-        last_cadence_change: new Date().toISOString(),
-      })
-      .eq('id', raceId);
+    const updated = await wsClient.updateRace(raceId, {
+      target_cadence: newCadence,
+      last_cadence_change: new Date().toISOString(),
+    });
 
-    if (error) {
-      console.error('Error updating cadence:', error);
+    if (!updated) {
+      console.error('Error updating cadence');
       loadRace();
     }
   };
@@ -72,16 +55,13 @@ export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) =>
     const validTolerance = Math.max(1, newTolerance);
     setRace({ ...race, cadence_tolerance: validTolerance });
 
-    const { error } = await supabase
-      .from('races')
-      .update({
-        cadence_tolerance: validTolerance,
-        last_cadence_change: new Date().toISOString(),
-      })
-      .eq('id', raceId);
+    const updated = await wsClient.updateRace(raceId, {
+      cadence_tolerance: validTolerance,
+      last_cadence_change: new Date().toISOString(),
+    });
 
-    if (error) {
-      console.error('Error updating tolerance:', error);
+    if (!updated) {
+      console.error('Error updating tolerance');
       loadRace();
     }
   };

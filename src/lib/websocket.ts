@@ -196,5 +196,5 @@ class WebSocketClient {
   }
 }
 
-const WS_URL = 'ws://localhost:8080';
+const WS_URL = 'ws://localhost:8081';
 export const wsClient = new WebSocketClient(WS_URL);

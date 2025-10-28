@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Race } from '../lib/types';
 import { Activity, Settings, Plus, Minus } from 'lucide-react';
+import { wsClient } from '../lib/websocket';
 
 type LiveDashboardProps = {
   raceId: string;
@@ -14,34 +15,19 @@ export const LiveDashboard = ({ raceId, onCadenceChange }: LiveDashboardProps) =
   useEffect(() => {
     loadRace();
 
-    const channel = supabase
-      .channel(`dashboard_${raceId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'races',
-          filter: `id=eq.${raceId}`,
-        },
-        () => {
-          loadRace();
-        }
-      )
-      .subscribe();
+    const unsubscribe = wsClient.subscribe('raceUpdate', (message) => {
+      if (message.data && (message.data as Race).id === raceId) {
+        loadRace();
+      }
+    });
 
     return () => {
-      // supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [raceId]);
 
   const loadRace = async () => {
-    const { data } = await supabase
-      .from('races')
-      .select('*')
-      .eq('id', raceId)
-      .single();
-
+    const data = await wsClient.getRace(raceId);
     if (data) {
       setRace(data);
     }
@@ -50,13 +36,10 @@ export const LiveDashboard = ({ raceId, onCadenceChange }: LiveDashboardProps) =
   const updateCadence = async (newCadence: number) => {
     if (!race) return;
 
-    await supabase
-      .from('races')
-      .update({
-        target_cadence: newCadence,
-        last_cadence_change: new Date().toISOString(),
-      })
-      .eq('id', raceId);
+    await wsClient.updateRace(raceId, {
+      target_cadence: newCadence,
+      last_cadence_change: new Date().toISOString(),
+    });
 
     onCadenceChange();
   };
@@ -64,13 +47,10 @@ export const LiveDashboard = ({ raceId, onCadenceChange }: LiveDashboardProps) =
   const updateTolerance = async (newTolerance: number) => {
     if (!race) return;
 
-    await supabase
-      .from('races')
-      .update({
-        cadence_tolerance: Math.max(1, newTolerance),
-        last_cadence_change: new Date().toISOString(),
-      })
-      .eq('id', raceId);
+    await wsClient.updateRace(raceId, {
+      cadence_tolerance: Math.max(1, newTolerance),
+      last_cadence_change: new Date().toISOString(),
+    });
 
     onCadenceChange();
   };

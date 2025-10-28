@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { RaceDisplay } from '../components/RaceDisplay';
 import { Race } from '../lib/types';
 import { RaceConfig } from '../components/RaceSetup';
+import { wsClient } from '../lib/websocket';
 
 export const RacePage = () => {
   const { raceId } = useParams<{ raceId: string }>();
@@ -23,11 +24,7 @@ export const RacePage = () => {
   const loadRace = async () => {
     if (!raceId) return;
 
-    const { data } = await supabase
-      .from('races')
-      .select('*')
-      .eq('id', raceId)
-      .single();
+    const data = await wsClient.getRace(raceId);
 
     if (data) {
       setRace(data);
