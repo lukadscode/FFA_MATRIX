@@ -18,32 +18,18 @@ export const AdminPage = () => {
     loadRace();
   }, [raceId]);
 
-  const loadRace = () => {
+  const loadRace = async () => {
     if (!raceId) return;
 
-    const raceDataStr = sessionStorage.getItem('currentRace');
-    if (!raceDataStr) {
-      navigate('/');
-      return;
-    }
+    const { data } = await supabase
+      .from('races')
+      .select('*')
+      .eq('id', raceId)
+      .single();
 
-    const raceData = JSON.parse(raceDataStr);
-    if (raceData.id === raceId) {
-      setRace({
-        id: raceData.id,
-        name: raceData.name,
-        mode: raceData.mode,
-        target_cadence: raceData.target_cadence,
-        cadence_tolerance: raceData.cadence_tolerance,
-        duration_seconds: raceData.duration_seconds,
-        status: raceData.status,
-        started_at: raceData.started_at,
-        ended_at: null,
-        last_cadence_change: null,
-        created_at: raceData.started_at,
-      });
+    if (data) {
+      setRace(data);
     }
-
     setLoading(false);
   };
 

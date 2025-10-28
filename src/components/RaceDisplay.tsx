@@ -86,69 +86,76 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
   );
 
   useEffect(() => {
-    const raceDataStr = sessionStorage.getItem('currentRace');
-    if (raceDataStr) {
-      const raceData = JSON.parse(raceDataStr);
-      setRace({
-        id: raceData.id,
-        name: raceData.name,
-        mode: raceData.mode,
-        target_cadence: raceData.target_cadence,
-        cadence_tolerance: raceData.cadence_tolerance,
-        duration_seconds: raceData.duration_seconds,
-        status: raceData.status,
-        started_at: raceData.started_at,
-        ended_at: null,
-        last_cadence_change: raceData.last_cadence_change || null,
-        created_at: raceData.started_at,
-      });
+    const loadRace = async () => {
+      const { data } = await supabase
+        .from('races')
+        .select('*')
+        .eq('id', raceId)
+        .single();
 
-      setParticipants(
-        raceData.participants.map((p: { id: string; name: string; teamId?: number; index: number }) => ({
-          id: p.id,
-          race_id: raceData.id,
-          name: p.name,
-          team_id: p.teamId || null,
-          ws_connection_id: null,
-          total_distance_in_cadence: 0,
-          current_cadence: 0,
-          is_in_cadence: false,
-          created_at: raceData.started_at,
-        }))
-      );
-    }
-
-    const handleConfigUpdate = (event: CustomEvent) => {
-      const updatedData = event.detail;
-
-      if (lastCadenceChangeRef.current !== updatedData.last_cadence_change) {
-        if (lastCadenceChangeRef.current !== null) {
-          playCadenceChangeSound();
-          setShowCadenceNotification(true);
-          setTimeout(() => setShowCadenceNotification(false), 5000);
+      if (data) {
+        if (lastCadenceChangeRef.current !== data.last_cadence_change) {
+          if (lastCadenceChangeRef.current !== null) {
+            playCadenceChangeSound();
+            setShowCadenceNotification(true);
+            setTimeout(() => setShowCadenceNotification(false), 5000);
+          }
+          lastCadenceChangeRef.current = data.last_cadence_change;
         }
-        lastCadenceChangeRef.current = updatedData.last_cadence_change;
+        setRace(data);
       }
-
-      setRace({
-        id: updatedData.id,
-        name: updatedData.name,
-        mode: updatedData.mode,
-        target_cadence: updatedData.target_cadence,
-        cadence_tolerance: updatedData.cadence_tolerance,
-        duration_seconds: updatedData.duration_seconds,
-        status: updatedData.status,
-        started_at: updatedData.started_at,
-        ended_at: null,
-        last_cadence_change: updatedData.last_cadence_change,
-        created_at: updatedData.started_at,
-      });
     };
 
-    window.addEventListener('raceConfigUpdated', handleConfigUpdate as EventListener);
+    const loadParticipants = async () => {
+      const { data } = await supabase
+        .from('participants')
+        .select('*')
+        .eq('race_id', raceId)
+        .order('created_at');
+
+      if (data) {
+        setParticipants(data);
+      }
+    };
+
+    loadRace();
+    loadParticipants();
+
+    const raceChannel = supabase
+      .channel(`race_updates_${raceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'races',
+          filter: `id=eq.${raceId}`,
+        },
+        () => {
+          loadRace();
+        }
+      )
+      .subscribe();
+
+    const participantsChannel = supabase
+      .channel(`participants_${raceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'participants',
+          filter: `race_id=eq.${raceId}`,
+        },
+        () => {
+          loadParticipants();
+        }
+      )
+      .subscribe();
 
     return () => {
-      window.removeEventListener('raceConfigUpdated', handleConfigUpdate as EventListener);
+      // supabase.removeChannel(raceChannel);
+      // supabase.removeChannel(participantsChannel);
     };
   }, [raceId]);
 
@@ -182,11 +189,6 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
   }, [raceStarted]);
 
   const handleRaceEnd = async () => {
-    sessionStorage.setItem('raceResults', JSON.stringify({
-      raceId,
-      mode: config.mode,
-      participants,
-    }));
     onRaceComplete();
   };
 

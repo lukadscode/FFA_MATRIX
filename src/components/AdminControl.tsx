@@ -15,62 +15,76 @@ export const AdminControl = ({ raceId, raceName, onBack, onEndRace }: AdminContr
 
   useEffect(() => {
     loadRace();
+
+    const channel = supabase
+      .channel(`admin_${raceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'races',
+          filter: `id=eq.${raceId}`,
+        },
+        () => {
+          loadRace();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      // supabase.removeChannel(channel);
+    };
   }, [raceId]);
 
-  const loadRace = () => {
-    const raceDataStr = sessionStorage.getItem('currentRace');
-    if (!raceDataStr) return;
+  const loadRace = async () => {
+    const { data } = await supabase
+      .from('races')
+      .select('*')
+      .eq('id', raceId)
+      .single();
 
-    const raceData = JSON.parse(raceDataStr);
-    if (raceData.id === raceId) {
-      setRace({
-        id: raceData.id,
-        name: raceData.name,
-        mode: raceData.mode,
-        target_cadence: raceData.target_cadence,
-        cadence_tolerance: raceData.cadence_tolerance,
-        duration_seconds: raceData.duration_seconds,
-        status: raceData.status,
-        started_at: raceData.started_at,
-        ended_at: null,
-        last_cadence_change: null,
-        created_at: raceData.started_at,
-      });
+    if (data) {
+      setRace(data);
     }
   };
 
-  const updateCadence = (newCadence: number) => {
+  const updateCadence = async (newCadence: number) => {
     if (!race) return;
 
-    const updatedRace = { ...race, target_cadence: newCadence, last_cadence_change: new Date().toISOString() };
-    setRace(updatedRace);
+    setRace({ ...race, target_cadence: newCadence });
 
-    const raceDataStr = sessionStorage.getItem('currentRace');
-    if (raceDataStr) {
-      const raceData = JSON.parse(raceDataStr);
-      raceData.target_cadence = newCadence;
-      raceData.last_cadence_change = new Date().toISOString();
-      sessionStorage.setItem('currentRace', JSON.stringify(raceData));
+    const { error } = await supabase
+      .from('races')
+      .update({
+        target_cadence: newCadence,
+        last_cadence_change: new Date().toISOString(),
+      })
+      .eq('id', raceId);
 
-      window.dispatchEvent(new CustomEvent('raceConfigUpdated', { detail: raceData }));
+    if (error) {
+      console.error('Error updating cadence:', error);
+      loadRace();
     }
   };
 
-  const updateTolerance = (newTolerance: number) => {
+  const updateTolerance = async (newTolerance: number) => {
     if (!race) return;
 
     const validTolerance = Math.max(1, newTolerance);
-    const updatedRace = { ...race, cadence_tolerance: validTolerance, last_cadence_change: new Date().toISOString() };
-    setRace(updatedRace);
+    setRace({ ...race, cadence_tolerance: validTolerance });
 
-    const raceDataStr = sessionStorage.getItem('currentRace');
-    if (raceDataStr) {
-      const raceData = JSON.parse(raceDataStr);
-      raceData.cadence_tolerance = validTolerance;
-      raceData.last_cadence_change = new Date().toISOString();
-      sessionStorage.setItem('currentRace', JSON.stringify(raceData));
+    const { error } = await supabase
+      .from('races')
+      .update({
+        cadence_tolerance: validTolerance,
+        last_cadence_change: new Date().toISOString(),
+      })
+      .eq('id', raceId);
 
-      window.dispatchEvent(new CustomEvent('raceConfigUpdated', { detail: raceData }));
+    if (error) {
+      console.error('Error updating tolerance:', error);
+      loadRace();
     }
   };
 
