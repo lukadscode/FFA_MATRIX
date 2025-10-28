@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { ERGRACE_CONFIG } from '../config/ergrace';
 
 export type RaceDefinition = {
   boats: Array<{
@@ -47,10 +48,11 @@ export const useErgRaceStatus = () => {
 
   const connectToErgRace = useCallback(() => {
     try {
-      const ws = new WebSocket('ws://localhost:443');
+      console.log(`🔌 Attempting to connect to ErgRace on port ${ERGRACE_CONFIG.PORT}...`);
+      const ws = new WebSocket(`ws://localhost:${ERGRACE_CONFIG.PORT}`);
 
       ws.onopen = () => {
-        console.log('✅ Connected to ErgRace status on port 443');
+        console.log(`✅ Connected to ErgRace status on port ${ERGRACE_CONFIG.PORT}`);
         setIsConnected(true);
       };
 
