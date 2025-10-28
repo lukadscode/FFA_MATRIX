@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Participant, Race } from '../lib/types';
 import { useErgRaceWebSocket, PM5Data } from '../hooks/useErgRaceWebSocket';
+import { useErgRaceStatus } from '../hooks/useErgRaceStatus';
 import { ParticipantCard } from './ParticipantCard';
 import { TeamCard } from './TeamCard';
 import { RaceConfig } from './RaceSetup';
@@ -20,9 +21,11 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
   const [timeRemaining, setTimeRemaining] = useState(300);
   const [race, setRace] = useState<Race | null>(null);
   const [showCadenceNotification, setShowCadenceNotification] = useState(false);
+  const [raceStarted, setRaceStarted] = useState(false);
   const lastStrokeTimeRef = useRef<Map<string, number>>(new Map());
   const consecutiveInCadenceRef = useRef<Map<string, number>>(new Map());
   const lastCadenceChangeRef = useRef<string | null>(null);
+  const { raceStatus } = useErgRaceStatus();
 
   const handlePM5Data = useCallback(
     async (data: PM5Data, participantIndex: number) => {
@@ -157,6 +160,20 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
   }, [raceId]);
 
   useEffect(() => {
+    if (raceStatus?.state === 9 && !raceStarted) {
+      console.log('🏁 ErgRace démarré ! Lancement du chronomètre');
+      setRaceStarted(true);
+    }
+
+    if (raceStatus?.state === 11 && raceStarted) {
+      console.log('🏁 ErgRace terminé ! Fin de la course');
+      handleRaceEnd();
+    }
+  }, [raceStatus, raceStarted]);
+
+  useEffect(() => {
+    if (!raceStarted) return;
+
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
@@ -169,17 +186,9 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [raceStarted]);
 
   const handleRaceEnd = async () => {
-    await supabase
-      .from('races')
-      .update({
-        status: 'completed',
-        ended_at: new Date().toISOString(),
-      })
-      .eq('id', raceId);
-
     onRaceComplete();
   };
 
@@ -263,6 +272,23 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
       >
         <Settings className="w-6 h-6" />
       </button>
+
+      {raceStatus && (
+        <div className="fixed top-4 left-4 z-40 bg-black/80 border-2 border-cyan-400 rounded-lg p-3 backdrop-blur-sm">
+          <div className="text-cyan-400 font-mono text-sm">
+            📍 ErgRace: <span className="font-bold">{raceStatus.state_desc.toUpperCase()}</span>
+          </div>
+        </div>
+      )}
+
+      {!raceStarted && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40 bg-yellow-500/20 border-2 border-yellow-400 rounded-lg p-4 backdrop-blur-sm">
+          <div className="text-yellow-400 font-mono text-center font-bold text-xl animate-pulse">
+            ⏳ EN ATTENTE DU DÉPART ERGRACE...
+          </div>
+        </div>
+      )}
+
       <CadenceChangeNotification
         targetCadence={currentTargetCadence}
         tolerance={currentTolerance}

@@ -40,6 +40,26 @@ L'application sera accessible sur `http://localhost:5173`
 
 ### 1. Configuration de la Course (Page Setup)
 
+**Deux options disponibles :**
+
+#### Option A : Configuration automatique depuis ErgRace ⭐ (Recommandé)
+
+1. Lancez **ErgRace** et configurez votre course
+2. Dans ErgRace, chargez la course (loading race)
+3. L'application détecte automatiquement :
+   - ✅ Le nom de la course
+   - ✅ Les participants (noms des rameurs)
+   - ✅ Le nombre de participants
+4. Un bandeau vert apparaît : "ErgRace détecté : X rameur(s)"
+5. Cliquez sur **"CHARGER"** pour importer automatiquement
+6. Configurez manuellement (ces paramètres restent dans l'app) :
+   - **Mode** : Solo ou Team
+   - **Cadence cible** (ex: 24 SPM)
+   - **Tolérance** (ex: ±2 SPM)
+7. Cliquez sur **"DÉMARRER LA COURSE"**
+
+#### Option B : Configuration manuelle
+
 1. Accédez à `http://localhost:5173`
 2. Remplissez les informations :
    - **Nom de la course** (ex: "Course du Samedi")
@@ -54,12 +74,14 @@ L'application sera accessible sur `http://localhost:5173`
 
 ### 2. Pendant la Course (Page Race)
 
-**L'application détecte automatiquement les données d'ErgRace :**
+**L'application se synchronise automatiquement avec ErgRace :**
 
-- Les PM5 envoient leurs données via WebSocket (ports 443, 444, etc.)
-- L'application reçoit la cadence en temps réel
-- Le compteur démarre automatiquement (5 minutes)
-- Les distances s'accumulent pour chaque rameur dans la cadence
+- ⏸️ **En attente** : Message "EN ATTENTE DU DÉPART ERGRACE..."
+- 🏁 **Départ automatique** : Quand ErgRace passe en "race running" (state 9)
+- ⏱️ **Chronomètre** : Démarre automatiquement au départ ErgRace
+- 📊 **Données en temps réel** : SPM récupéré depuis `race_data` de chaque lane
+- 🎯 **Distance** : Calculée selon VOTRE logique (cadence dans la plage acceptée)
+- ⚠️ **Important** : Les distances ErgRace sont IGNORÉES, seul le SPM est utilisé
 
 **Écran principal affiche :**
 - Cadence cible et plage acceptée
@@ -77,13 +99,20 @@ L'application sera accessible sur `http://localhost:5173`
 
 ### 3. Fin de la Course
 
-**Déclenchement automatique :**
-- Lorsque le chronomètre atteint 0:00
-- L'application met à jour le statut de la course à "completed"
-- Redirection automatique vers la page des résultats
+**Trois façons de terminer :**
 
-**Ou déclenchement manuel :**
-- (À implémenter si besoin)
+1. **Fin automatique ErgRace** ⭐ (Recommandé)
+   - Quand ErgRace passe en "race complete" (state 11)
+   - L'application détecte et termine automatiquement
+   - Redirection vers la page des résultats
+
+2. **Fin par chronomètre**
+   - Lorsque le compteur atteint 0:00
+   - Redirection automatique vers les résultats
+
+3. **Fin manuelle**
+   - Terminez dans ErgRace (bouton Stop)
+   - L'application suit automatiquement
 
 ### 4. Résultats (Page Results)
 

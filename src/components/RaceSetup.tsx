@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Play, Plus, Trash2, Radio } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Plus, Trash2, Radio, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useErgRaceStatus } from '../hooks/useErgRaceStatus';
 
 export type RaceConfig = {
   name: string;
@@ -16,6 +17,8 @@ type RaceSetupProps = {
 
 export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
   const navigate = useNavigate();
+  const { raceDefinition, raceStatus, isConnected } = useErgRaceStatus();
+
   const [raceName, setRaceName] = useState('Matrix Race');
   const [mode, setMode] = useState<'solo' | 'team'>('solo');
   const [targetCadence, setTargetCadence] = useState(22);
@@ -25,6 +28,38 @@ export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
     { name: 'Participant 2', teamId: 1 },
   ]);
   const [newParticipantName, setNewParticipantName] = useState('');
+  const [ergRaceDetected, setErgRaceDetected] = useState(false);
+
+  useEffect(() => {
+    if (raceDefinition && !ergRaceDetected) {
+      setRaceName(raceDefinition.name_long || raceDefinition.event_name || 'Matrix Race');
+
+      const boats = raceDefinition.boats.map((boat, index) => ({
+        name: boat.name || `Rameur ${index + 1}`,
+        teamId: mode === 'team' ? Math.floor(index / 2) + 1 : undefined,
+      }));
+
+      if (boats.length > 0) {
+        setParticipants(boats);
+        setErgRaceDetected(true);
+      }
+    }
+  }, [raceDefinition, ergRaceDetected, mode]);
+
+  const loadFromErgRace = () => {
+    if (raceDefinition) {
+      setRaceName(raceDefinition.name_long || raceDefinition.event_name || 'Matrix Race');
+
+      const boats = raceDefinition.boats.map((boat, index) => ({
+        name: boat.name || `Rameur ${index + 1}`,
+        teamId: mode === 'team' ? Math.floor(index / 2) + 1 : undefined,
+      }));
+
+      if (boats.length > 0) {
+        setParticipants(boats);
+      }
+    }
+  };
 
   const addParticipant = () => {
     if (newParticipantName.trim()) {
@@ -77,14 +112,48 @@ export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
           <h1 className="text-5xl font-bold text-green-400 font-mono animate-pulse">
             RACE SETUP
           </h1>
-          <button
-            onClick={() => navigate('/ergrace-logs')}
-            className="flex items-center gap-2 px-4 py-2 bg-cyan-500/20 border border-cyan-400 rounded hover:bg-cyan-500/40 transition-all"
-          >
-            <Radio className="w-5 h-5 text-cyan-400" />
-            <span className="text-cyan-400 font-mono font-bold">LOGS</span>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate('/ergrace-logs')}
+              className="flex items-center gap-2 px-4 py-2 bg-cyan-500/20 border border-cyan-400 rounded hover:bg-cyan-500/40 transition-all"
+            >
+              <Radio className="w-5 h-5 text-cyan-400" />
+              <span className="text-cyan-400 font-mono font-bold">LOGS</span>
+            </button>
+          </div>
         </div>
+
+        {isConnected && raceDefinition && (
+          <div className="mb-6 bg-green-500/10 border border-green-400 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-green-300 font-mono mb-1">
+                  ✅ ErgRace détecté : {raceDefinition.boats.length} rameur(s)
+                </div>
+                <div className="text-xs text-green-400 font-mono">
+                  Course : {raceDefinition.name_long || raceDefinition.event_name}
+                </div>
+              </div>
+              <button
+                onClick={loadFromErgRace}
+                className="flex items-center gap-2 px-3 py-2 bg-green-500/20 border border-green-400 rounded hover:bg-green-500/40 transition-all"
+              >
+                <Download className="w-4 h-4 text-green-400" />
+                <span className="text-green-400 font-mono text-sm">CHARGER</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {raceStatus && raceStatus.state_desc !== 'inactive' && (
+          <div className="mb-6 bg-cyan-500/10 border border-cyan-400 rounded-lg p-3">
+            <div className="text-center">
+              <div className="text-lg font-bold text-cyan-400 font-mono">
+                📍 ErgRace : {raceStatus.state_desc.toUpperCase()}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-6">
           <div>

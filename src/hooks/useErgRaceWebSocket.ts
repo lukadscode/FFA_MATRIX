@@ -19,9 +19,23 @@ export const useErgRaceWebSocket = (
     Array(participantCount).fill('DISCONNECTED')
   );
 
-  const parseErgRaceMessage = useCallback((message: string): PM5Data | null => {
+  const parseErgRaceMessage = useCallback((message: string, lane: number): PM5Data | null => {
     try {
+      if (!message || message === '{}') return null;
+
       const data = JSON.parse(message);
+
+      if (data.race_data && data.race_data.data) {
+        const laneData = data.race_data.data.find((d: { lane: number }) => d.lane === lane + 1);
+        if (laneData && laneData.spm !== undefined) {
+          return {
+            cadence: parseInt(laneData.spm),
+            distance: laneData.meters ? parseInt(laneData.meters) : undefined,
+            time: laneData.time ? parseInt(laneData.time) : undefined,
+            power: laneData.watts ? parseInt(laneData.watts) : undefined,
+          };
+        }
+      }
 
       if (data.SPM !== undefined) {
         return {
@@ -60,7 +74,7 @@ export const useErgRaceWebSocket = (
       };
 
       ws.onmessage = (evt) => {
-        const parsedData = parseErgRaceMessage(evt.data);
+        const parsedData = parseErgRaceMessage(evt.data, index);
         if (parsedData && parsedData.cadence !== undefined) {
           onData(parsedData, index);
         }
