@@ -19,92 +19,84 @@ export const useErgRaceWebSocket = (
     Array(participantCount).fill('DISCONNECTED')
   );
 
-  const parseErgRaceMessage = useCallback((message: string, lane: number): PM5Data | null => {
+  const parseErgRaceMessage = useCallback((message: string): Array<PM5Data | null> => {
     try {
-      if (!message || message === '{}') return null;
+      if (!message || message === '{}') return [];
 
       const data = JSON.parse(message);
 
       if (data.race_data && data.race_data.data) {
-        const laneData = data.race_data.data.find((d: { lane: number }) => d.lane === lane + 1);
-        if (laneData && laneData.spm !== undefined) {
-          return {
-            cadence: parseInt(laneData.spm),
-            distance: laneData.meters ? parseInt(laneData.meters) : undefined,
-            time: laneData.time ? parseInt(laneData.time) : undefined,
-            power: laneData.watts ? parseInt(laneData.watts) : undefined,
-          };
+        const results: Array<PM5Data | null> = [];
+        for (let i = 0; i < participantCount; i++) {
+          const laneData = data.race_data.data.find((d: { lane: number }) => d.lane === i + 1);
+          if (laneData && laneData.spm !== undefined) {
+            results[i] = {
+              cadence: parseInt(laneData.spm),
+              distance: laneData.meters ? parseInt(laneData.meters) : undefined,
+              time: laneData.time ? parseInt(laneData.time) : undefined,
+              power: laneData.watts ? parseInt(laneData.watts) : undefined,
+            };
+          } else {
+            results[i] = null;
+          }
         }
+        return results;
       }
 
       if (data.SPM !== undefined) {
-        return {
-          cadence: parseInt(data.SPM),
-          distance: data.Distance ? parseInt(data.Distance) : undefined,
-          time: data.Time ? parseInt(data.Time) : undefined,
-          power: data.Watts ? parseInt(data.Watts) : undefined,
-        };
+        return [
+          {
+            cadence: parseInt(data.SPM),
+            distance: data.Distance ? parseInt(data.Distance) : undefined,
+            time: data.Time ? parseInt(data.Time) : undefined,
+            power: data.Watts ? parseInt(data.Watts) : undefined,
+          }
+        ];
       }
 
-      return null;
+      return [];
     } catch {
-      return null;
+      return [];
     }
-  }, []);
+  }, [participantCount]);
 
-  const connectWebSocket = useCallback((index: number, port: number = 443 + index) => {
+  const connectWebSocket = useCallback(() => {
     try {
-      const wsUri = `ws://localhost:${port}`;
+      const wsUri = `ws://localhost:443`;
       const ws = new WebSocket(wsUri);
 
       ws.onopen = () => {
-        setConnectionStates(prev => {
-          const newStates = [...prev];
-          newStates[index] = 'CONNECTED';
-          return newStates;
-        });
+        setConnectionStates(Array(participantCount).fill('CONNECTED'));
       };
 
       ws.onclose = () => {
-        setConnectionStates(prev => {
-          const newStates = [...prev];
-          newStates[index] = 'DISCONNECTED';
-          return newStates;
-        });
+        setConnectionStates(Array(participantCount).fill('DISCONNECTED'));
       };
 
       ws.onmessage = (evt) => {
-        const parsedData = parseErgRaceMessage(evt.data, index);
-        if (parsedData && parsedData.cadence !== undefined) {
-          onData(parsedData, index);
-        }
-      };
-
-      ws.onerror = () => {
-        setConnectionStates(prev => {
-          const newStates = [...prev];
-          newStates[index] = 'ERROR';
-          return newStates;
+        const parsedDataArray = parseErgRaceMessage(evt.data);
+        parsedDataArray.forEach((parsedData, index) => {
+          if (parsedData && parsedData.cadence !== undefined) {
+            onData(parsedData, index);
+          }
         });
       };
 
-      websocketsRef.current[index] = ws;
+      ws.onerror = () => {
+        setConnectionStates(Array(participantCount).fill('ERROR'));
+      };
+
+      websocketsRef.current[0] = ws;
     } catch (error) {
-      console.error(`Error connecting WebSocket ${index}:`, error);
-      setConnectionStates(prev => {
-        const newStates = [...prev];
-        newStates[index] = 'ERROR';
-        return newStates;
-      });
+      console.error('Error connecting WebSocket:', error);
+      setConnectionStates(Array(participantCount).fill('ERROR'));
     }
-  }, [onData, parseErgRaceMessage]);
+  }, [participantCount, onData, parseErgRaceMessage]);
 
   useEffect(() => {
     if (!isActive) return;
 
-    for (let i = 0; i < participantCount; i++) {
-      connectWebSocket(i);
-    }
+    connectWebSocket();
 
     return () => {
       websocketsRef.current.forEach(ws => {
@@ -116,12 +108,12 @@ export const useErgRaceWebSocket = (
     };
   }, [participantCount, isActive, connectWebSocket]);
 
-  const reconnect = useCallback((index: number) => {
-    const ws = websocketsRef.current[index];
+  const reconnect = useCallback(() => {
+    const ws = websocketsRef.current[0];
     if (ws) {
       ws.close();
     }
-    setTimeout(() => connectWebSocket(index), 500);
+    setTimeout(() => connectWebSocket(), 500);
   }, [connectWebSocket]);
 
   return {

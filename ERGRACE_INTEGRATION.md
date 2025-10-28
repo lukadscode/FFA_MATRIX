@@ -4,12 +4,11 @@
 
 ### Ports WebSocket ErgRace
 
-ErgRace expose des serveurs WebSocket locaux, un par rameur :
+ErgRace expose un seul serveur WebSocket qui transmet les données de toutes les lanes :
 
-- **Port 443** : Rameur 1 (Participant 0)
-- **Port 444** : Rameur 2 (Participant 1)
-- **Port 445** : Rameur 3 (Participant 2)
-- ... jusqu'à **Port 452** (10 rameurs max)
+- **Port 443** : Toutes les lanes (1 à 10)
+- Les données sont envoyées dans un format unifié avec identification de la lane
+- Une seule connexion WebSocket gère tous les rameurs
 
 ### Messages Reçus d'ErgRace
 
@@ -79,10 +78,10 @@ export const useErgRaceWebSocket = (
 ```
 
 **Fonctionnalités :**
-- Connexion automatique aux ports 443+
-- Parse les messages JSON
-- Détecte la cadence (SPM)
-- Gère les états de connexion
+- Connexion unique au port 443
+- Parse les messages JSON avec support multi-lanes
+- Extrait les données de chaque lane individuellement
+- Gère les états de connexion pour tous les participants
 - Permet la reconnexion
 
 **Utilisation dans `RaceDisplay` :**
@@ -241,12 +240,12 @@ Si votre application et ErgRace sont sur des machines différentes :
    ipconfig  # Windows
    ```
 
-2. **Modifiez `useErgRaceWebSocket.ts`** ligne 41 :
+2. **Modifiez `useErgRaceWebSocket.ts`** ligne 65 :
    ```typescript
-   const wsUri = `ws://192.168.1.10:${port}`;  // IP de la machine ErgRace
+   const wsUri = `ws://192.168.1.10:443`;  // IP de la machine ErgRace
    ```
 
-3. **Autorisez les connexions** dans le pare-feu pour les ports 443-452
+3. **Autorisez les connexions** dans le pare-feu pour le port 443
 
 ---
 
@@ -291,11 +290,12 @@ Ouvrez la console (F12) pour voir :
 
 ## 📝 Notes Importantes
 
-1. **Un port par rameur** : Chaque PM5 nécessite son propre port WebSocket
-2. **Mapping automatique** : Le participant à l'index 0 → port 443, index 1 → port 444, etc.
-3. **Pas de serveur central** : ErgRace expose directement les WebSockets
-4. **Messages non bidirectionnels** : L'app ne peut que recevoir (pour l'instant)
-5. **Format JSON strict** : Tout message doit être du JSON valide
+1. **Un seul port pour tous** : ERGRACE transmet toutes les lanes sur le port 443
+2. **Identification par lane** : Chaque rameur est identifié par son numéro de lane (1-10)
+3. **Mapping automatique** : Le participant à l'index 0 correspond à la lane 1, index 1 → lane 2, etc.
+4. **Pas de serveur central** : ErgRace expose directement le WebSocket
+5. **Messages non bidirectionnels** : L'app ne peut que recevoir (pour l'instant)
+6. **Format JSON strict** : Tout message doit être du JSON valide
 
 ---
 
