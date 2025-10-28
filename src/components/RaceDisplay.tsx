@@ -23,8 +23,7 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
   const [race, setRace] = useState<Race | null>(null);
   const [showCadenceNotification, setShowCadenceNotification] = useState(false);
   const [raceStarted, setRaceStarted] = useState(false);
-  const firstStrokeDistanceRef = useRef<Map<string, number>>(new Map());
-  const baseDistanceOnEntryRef = useRef<Map<string, number>>(new Map());
+  const lastDistanceRef = useRef<Map<string, number>>(new Map());
   const isInCadenceRef = useRef<Map<string, boolean>>(new Map());
   const lastCadenceChangeRef = useRef<string | null>(null);
   const { raceStatus } = useErgRaceStatus();
@@ -43,22 +42,22 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
         cadence <= (currentTargetCadence + currentTolerance);
 
       const wasInCadence = isInCadenceRef.current.get(participant.id) || false;
+      const lastDistance = lastDistanceRef.current.get(participant.id);
       let newTotalDistance = participant.total_distance_in_cadence;
 
       if (isInCadence && !wasInCadence) {
         newTotalDistance += 1;
-        firstStrokeDistanceRef.current.set(participant.id, currentDistance);
-        baseDistanceOnEntryRef.current.set(participant.id, participant.total_distance_in_cadence);
+        lastDistanceRef.current.set(participant.id, currentDistance);
         isInCadenceRef.current.set(participant.id, true);
-      } else if (isInCadence && wasInCadence) {
-        const firstStrokeDistance = firstStrokeDistanceRef.current.get(participant.id) || currentDistance;
-        const baseDistance = baseDistanceOnEntryRef.current.get(participant.id) || participant.total_distance_in_cadence;
-        const distanceSinceFirstStroke = Math.floor(currentDistance - firstStrokeDistance);
-        newTotalDistance = baseDistance + 1 + distanceSinceFirstStroke;
+      } else if (isInCadence && wasInCadence && lastDistance !== undefined) {
+        const strokeDistance = Math.floor(Math.abs(currentDistance - lastDistance));
+        if (strokeDistance > 0) {
+          newTotalDistance += strokeDistance;
+          lastDistanceRef.current.set(participant.id, currentDistance);
+        }
       } else if (!isInCadence && wasInCadence) {
         isInCadenceRef.current.set(participant.id, false);
-        firstStrokeDistanceRef.current.delete(participant.id);
-        baseDistanceOnEntryRef.current.delete(participant.id);
+        lastDistanceRef.current.delete(participant.id);
       }
 
       setParticipants((prev) =>
