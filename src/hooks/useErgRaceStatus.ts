@@ -41,73 +41,109 @@ export const useErgRaceStatus = () => {
   const [raceStatus, setRaceStatus] = useState<RaceStatus | null>(null);
   const [raceData, setRaceData] = useState<RaceData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
+
+  const connectToErgRace = () => {
+    if (!isEnabled) return;
+
+    try {
+      const ws = new WebSocket('ws://localhost:443');
+
+      ws.onopen = () => {
+        console.log('✅ Connected to ErgRace status on port 443');
+        setIsConnected(true);
+      };
+
+      ws.onclose = () => {
+        console.log('❌ Disconnected from ErgRace status');
+        setIsConnected(false);
+        if (isEnabled) {
+          reconnectTimeoutRef.current = window.setTimeout(connectToErgRace, 2000);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ ErgRace status connection error:', error);
+        setIsConnected(false);
+      };
+
+      ws.onmessage = (evt) => {
+        try {
+          if (!evt.data || evt.data === '{}') return;
+
+          const message = JSON.parse(evt.data);
+
+          if (message.race_definition) {
+            console.log('📋 Race definition received:', message.race_definition);
+            setRaceDefinition(message.race_definition);
+          }
+
+          if (message.race_status) {
+            console.log('🏁 Race status:', message.race_status.state_desc);
+            setRaceStatus(message.race_status);
+          }
+
+          if (message.race_data) {
+            setRaceData(message.race_data);
+          }
+        } catch (error) {
+          console.error('Error parsing ErgRace message:', error);
+        }
+      };
+
+      wsRef.current = ws;
+    } catch (error) {
+      console.error('Failed to connect to ErgRace status:', error);
+      if (isEnabled) {
+        reconnectTimeoutRef.current = window.setTimeout(connectToErgRace, 2000);
+      }
+    }
+  };
+
+  const connect = () => {
+    setIsEnabled(true);
+  };
+
+  const disconnect = () => {
+    setIsEnabled(false);
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setIsConnected(false);
+    setRaceDefinition(null);
+    setRaceStatus(null);
+    setRaceData(null);
+  };
 
   useEffect(() => {
-    const connectToErgRace = () => {
-      try {
-        const ws = new WebSocket('ws://localhost:443');
-
-        ws.onopen = () => {
-          console.log('✅ Connected to ErgRace status on port 443');
-          setIsConnected(true);
-        };
-
-        ws.onclose = () => {
-          console.log('❌ Disconnected from ErgRace status');
-          setIsConnected(false);
-          setTimeout(connectToErgRace, 2000);
-        };
-
-        ws.onerror = (error) => {
-          console.error('❌ ErgRace status connection error:', error);
-          setIsConnected(false);
-        };
-
-        ws.onmessage = (evt) => {
-          try {
-            if (!evt.data || evt.data === '{}') return;
-
-            const message = JSON.parse(evt.data);
-
-            if (message.race_definition) {
-              console.log('📋 Race definition received:', message.race_definition);
-              setRaceDefinition(message.race_definition);
-            }
-
-            if (message.race_status) {
-              console.log('🏁 Race status:', message.race_status.state_desc);
-              setRaceStatus(message.race_status);
-            }
-
-            if (message.race_data) {
-              setRaceData(message.race_data);
-            }
-          } catch (error) {
-            console.error('Error parsing ErgRace message:', error);
-          }
-        };
-
-        wsRef.current = ws;
-      } catch (error) {
-        console.error('Failed to connect to ErgRace status:', error);
-        setTimeout(connectToErgRace, 2000);
-      }
-    };
-
-    connectToErgRace();
+    if (isEnabled) {
+      connectToErgRace();
+    }
 
     return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
       if (wsRef.current) {
         wsRef.current.close();
       }
     };
-  }, []);
+  }, [isEnabled]);
 
   return {
     raceDefinition,
     raceStatus,
     raceData,
     isConnected,
+    isEnabled,
+    connect,
+    disconnect,
   };
 };

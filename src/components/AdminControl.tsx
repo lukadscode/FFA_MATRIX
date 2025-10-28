@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Race } from '../lib/types';
-import { Activity, Plus, Minus, Monitor, ArrowLeft } from 'lucide-react';
+import { Activity, Plus, Minus, Monitor, ArrowLeft, StopCircle } from 'lucide-react';
 
 type AdminControlProps = {
   raceId: string;
   raceName: string;
   onBack: () => void;
+  onEndRace?: () => void;
 };
 
-export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) => {
+export const AdminControl = ({ raceId, raceName, onBack, onEndRace }: AdminControlProps) => {
   const [race, setRace] = useState<Race | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     loadRace();
@@ -212,6 +214,45 @@ export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) =>
                 <div className="text-lg text-green-300 font-mono mt-1">SPM</div>
               </div>
             </div>
+
+            {onEndRace && (
+              <div className="bg-red-500/10 rounded-lg p-4 border-2 border-red-400">
+                {!showConfirm ? (
+                  <button
+                    onClick={() => setShowConfirm(true)}
+                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-red-500/20 border-2 border-red-400 rounded-lg hover:bg-red-500/40 transition-all"
+                  >
+                    <StopCircle className="w-6 h-6 text-red-400" />
+                    <span className="text-red-400 font-mono font-bold text-lg">
+                      TERMINER LA COURSE
+                    </span>
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-center text-red-400 font-mono font-bold text-lg mb-3">
+                      Êtes-vous sûr ?
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowConfirm(false)}
+                        className="flex-1 px-4 py-3 bg-green-500/20 border border-green-400 rounded hover:bg-green-500/40 transition-all text-green-400 font-mono font-bold"
+                      >
+                        ANNULER
+                      </button>
+                      <button
+                        onClick={() => {
+                          onEndRace();
+                          setShowConfirm(false);
+                        }}
+                        className="flex-1 px-4 py-3 bg-red-500 border border-red-600 rounded hover:bg-red-600 transition-all text-white font-mono font-bold"
+                      >
+                        TERMINER
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

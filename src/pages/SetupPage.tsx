@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import { RaceSetup, RaceConfig } from '../components/RaceSetup';
-import { wsClient } from '../lib/websocket';
 
 export const SetupPage = () => {
   const navigate = useNavigate();
 
-  const handleStartRace = async (config: RaceConfig) => {
-    const race = await wsClient.createRace({
+  const handleStartRace = (config: RaceConfig) => {
+    const raceId = crypto.randomUUID();
+
+    const raceData = {
+      id: raceId,
       name: config.name,
       mode: config.mode,
       target_cadence: config.targetCadence,
@@ -14,25 +16,16 @@ export const SetupPage = () => {
       duration_seconds: 300,
       status: 'active',
       started_at: new Date().toISOString(),
-      ended_at: null,
-      last_cadence_change: null,
-    });
-
-    if (!race) return;
-
-    for (const p of config.participants) {
-      await wsClient.createParticipant({
-        race_id: race.id,
+      participants: config.participants.map((p, index) => ({
+        id: crypto.randomUUID(),
         name: p.name,
-        team_id: p.teamId || null,
-        ws_connection_id: null,
-        total_distance_in_cadence: 0,
-        current_cadence: 0,
-        is_in_cadence: false,
-      });
-    }
+        teamId: p.teamId,
+        index,
+      })),
+    };
 
-    navigate(`/race/${race.id}`);
+    sessionStorage.setItem('currentRace', JSON.stringify(raceData));
+    navigate(`/race/${raceId}`);
   };
 
   return <RaceSetup onStartRace={handleStartRace} />;
