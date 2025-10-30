@@ -9,6 +9,7 @@ export type RaceConfig = {
   targetCadence: number;
   cadenceTolerance: number;
   participants: Array<{ name: string; teamId?: number }>;
+  simulationMode?: boolean;
 };
 
 type RaceSetupProps = {
@@ -29,6 +30,7 @@ export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
   ]);
   const [newParticipantName, setNewParticipantName] = useState('');
   const [ergRaceDetected, setErgRaceDetected] = useState(false);
+  const [simulationMode, setSimulationMode] = useState(false);
 
   useEffect(() => {
     if (raceDefinition && !ergRaceDetected) {
@@ -102,6 +104,7 @@ export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
       targetCadence,
       cadenceTolerance,
       participants,
+      simulationMode,
     });
   };
 
@@ -190,6 +193,25 @@ export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
                 TEAM
               </button>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-green-400 font-mono mb-2">MODE SIMULATION:</label>
+            <button
+              onClick={() => setSimulationMode(!simulationMode)}
+              className={`w-full py-3 rounded font-mono font-bold transition-all ${
+                simulationMode
+                  ? 'bg-cyan-500 text-black'
+                  : 'bg-black/50 text-cyan-400 border border-cyan-400 hover:bg-cyan-500/20'
+              }`}
+            >
+              {simulationMode ? '✓ SIMULATION ACTIVÉE' : 'SIMULATION DÉSACTIVÉE'}
+            </button>
+            {simulationMode && (
+              <div className="mt-2 text-sm text-cyan-400 font-mono text-center">
+                Génère des données de rameurs virtuels
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
