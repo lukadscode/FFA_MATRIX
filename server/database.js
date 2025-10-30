@@ -19,6 +19,7 @@ db.exec(`
     started_at TEXT,
     ended_at TEXT,
     last_cadence_change TEXT,
+    simulation_mode INTEGER DEFAULT 0,
     created_at TEXT NOT NULL
   );
 
@@ -66,10 +67,10 @@ export function getAllRaces() {
 
 export function createRace(race) {
   const stmt = db.prepare(`
-    INSERT INTO races (id, name, mode, target_cadence, cadence_tolerance, duration_seconds, status, started_at, ended_at, last_cadence_change, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO races (id, name, mode, target_cadence, cadence_tolerance, duration_seconds, status, started_at, ended_at, last_cadence_change, simulation_mode, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  stmt.run(race.id, race.name, race.mode, race.target_cadence, race.cadence_tolerance, race.duration_seconds, race.status, race.started_at, race.ended_at, race.last_cadence_change, race.created_at);
+  stmt.run(race.id, race.name, race.mode, race.target_cadence, race.cadence_tolerance, race.duration_seconds, race.status, race.started_at, race.ended_at, race.last_cadence_change, race.simulation_mode ? 1 : 0, race.created_at);
   return race;
 }
 

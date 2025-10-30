@@ -9,6 +9,7 @@ export type Race = {
   started_at: string | null;
   ended_at: string | null;
   last_cadence_change: string | null;
+  simulation_mode?: boolean;
   created_at: string;
 };
 
