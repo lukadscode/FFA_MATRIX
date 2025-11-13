@@ -1,4 +1,4 @@
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import {
   getRace,
   getActiveRace,
@@ -21,6 +21,48 @@ const WS_PORT = 8081;
 const wss = new WebSocketServer({ port: WS_PORT, host: '0.0.0.0' });
 
 const clients = new Set();
+
+const LED_SERVER_URL = 'ws://leds-ws-server.under-code.fr:8081';
+let ledClient = null;
+let reconnectTimeout = null;
+
+function connectToLEDServer() {
+  try {
+    ledClient = new WebSocket(LED_SERVER_URL);
+
+    ledClient.on('open', () => {
+      console.log('✅ Connected to LED server:', LED_SERVER_URL);
+    });
+
+    ledClient.on('error', (error) => {
+      console.error('❌ LED server connection error:', error.message);
+    });
+
+    ledClient.on('close', () => {
+      console.log('🔌 Disconnected from LED server. Reconnecting in 5s...');
+      ledClient = null;
+      reconnectTimeout = setTimeout(connectToLEDServer, 5000);
+    });
+  } catch (error) {
+    console.error('❌ Failed to connect to LED server:', error.message);
+    reconnectTimeout = setTimeout(connectToLEDServer, 5000);
+  }
+}
+
+function sendToLEDServer(message) {
+  if (ledClient && ledClient.readyState === WebSocket.OPEN) {
+    try {
+      ledClient.send(JSON.stringify(message));
+      console.log('📤 Sent to LED server:', message.type);
+    } catch (error) {
+      console.error('❌ Failed to send to LED server:', error.message);
+    }
+  } else {
+    console.warn('⚠️  LED server not connected, message not sent');
+  }
+}
+
+connectToLEDServer();
 
 function getLocalIPAddress() {
   const nets = networkInterfaces();
@@ -187,6 +229,88 @@ wss.on("connection", (ws) => {
           break;
         }
 
+        case "send_global_command": {
+          console.log(`📢 Global command received: ${data.command}`);
+
+          // Forward to LED server
+          sendToLEDServer({
+            type: "send_global_command",
+            command: data.command,
+            message: data.message || data.command
+          });
+
+          // Broadcast to all connected clients
+          broadcastMessage = {
+            type: "globalCommand",
+            command: data.command,
+            message: data.message || data.command
+          };
+
+          response = { type: "command_sent", command: data.command };
+          break;
+        }
+
+        case "send_game_data": {
+          console.log(`🎮 Game data received: ${data.payload.game}, ${data.payload.players.length} players`);
+
+          // Get active race
+          const activeRace = getActiveRace();
+
+          if (!activeRace) {
+            console.warn("⚠️  No active race found");
+            response = { type: "error", message: "No active race found" };
+            break;
+          }
+
+          // Get all participants for the active race
+          const participants = getParticipants(activeRace.id);
+
+          if (participants.length === 0) {
+            console.warn("⚠️  No participants found for active race");
+            response = { type: "error", message: "No participants found" };
+            break;
+          }
+
+          // Map simulator players to database participants
+          let updatedCount = 0;
+          data.payload.players.forEach((player) => {
+            // Find participant by index (player.id - 1 since player IDs start at 1)
+            const participantIndex = player.id - 1;
+
+            if (participantIndex >= 0 && participantIndex < participants.length) {
+              const participant = participants[participantIndex];
+
+              // Update participant data
+              updateParticipant(participant.id, {
+                current_cadence: Math.round(player.rate),
+                is_in_cadence: player['target-rate'] ? 1 : 0,
+                total_distance_in_cadence: player.distance
+              });
+
+              updatedCount++;
+            }
+          });
+
+          console.log(`✅ Updated ${updatedCount} participants`);
+
+          // Forward to LED server immediately
+          sendToLEDServer(data);
+
+          // Broadcast updated participants to all clients
+          const updatedParticipants = getParticipants(activeRace.id).map(convertDbBooleans);
+          broadcastMessage = {
+            type: "participantsUpdate",
+            data: updatedParticipants
+          };
+
+          response = {
+            type: "game_data_processed",
+            updated: updatedCount,
+            raceId: activeRace.id
+          };
+          break;
+        }
+
         default:
           response = { type: "error", message: "Unknown message type" };
       }
@@ -221,6 +345,16 @@ wss.on("connection", (ws) => {
 
 process.on("SIGINT", () => {
   console.log("\n🛑 Shutting down server...");
+
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+  }
+
+  if (ledClient) {
+    ledClient.close();
+    console.log("✅ LED client connection closed");
+  }
+
   wss.close(() => {
     console.log("✅ Server closed");
     process.exit(0);
