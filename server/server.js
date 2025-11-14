@@ -22,11 +22,17 @@ const wss = new WebSocketServer({ port: WS_PORT, host: '0.0.0.0' });
 
 const clients = new Set();
 
+const LED_SERVER_ENABLED = false;
 const LED_SERVER_URL = 'ws://leds-ws-server.under-code.fr:8081';
 let ledClient = null;
 let reconnectTimeout = null;
 
 function connectToLEDServer() {
+  if (!LED_SERVER_ENABLED) {
+    console.log('ℹ️  LED server connection disabled');
+    return;
+  }
+
   try {
     ledClient = new WebSocket(LED_SERVER_URL);
 
@@ -50,6 +56,10 @@ function connectToLEDServer() {
 }
 
 function sendToLEDServer(message) {
+  if (!LED_SERVER_ENABLED) {
+    return;
+  }
+
   if (ledClient && ledClient.readyState === WebSocket.OPEN) {
     try {
       ledClient.send(JSON.stringify(message));
