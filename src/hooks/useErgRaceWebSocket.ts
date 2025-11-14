@@ -96,18 +96,20 @@ export const useErgRaceWebSocket = (
           }
         });
 
-        // Envoyer les données aux LEDs
+        // Envoyer les données aux LEDs en utilisant les données reçues directement
         if (ledWsRef.current?.readyState === WebSocket.OPEN) {
-          const players = participantsRef.current.map((participant, index) => {
+          const players = parsedDataArray.map((parsedData, index) => {
+            const participant = participantsRef.current[index];
+            const cadence = parsedData?.cadence || participant?.current_cadence || 0;
             const isInCadence =
-              participant.current_cadence >= (targetCadence - tolerance) &&
-              participant.current_cadence <= (targetCadence + tolerance);
+              cadence >= (targetCadence - tolerance) &&
+              cadence <= (targetCadence + tolerance);
 
             return {
               id: index + 1,
-              rate: participant.current_cadence,
+              rate: cadence,
               'target-rate': isInCadence,
-              distance: participant.total_distance_in_cadence
+              distance: participant?.total_distance_in_cadence || 0
             };
           });
 
