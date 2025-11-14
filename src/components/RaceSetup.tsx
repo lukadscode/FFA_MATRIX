@@ -228,7 +228,6 @@ export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
               <label className="block text-green-400 font-mono mb-2">TOLÉRANCE (±SPM):</label>
               <input
                 type="number"
-                min="0"
                 value={cadenceTolerance}
                 onChange={(e) => setCadenceTolerance(Number(e.target.value))}
                 className="w-full bg-black/50 border border-green-400 rounded px-4 py-2 text-green-400 font-mono focus:outline-none focus:border-green-300"
@@ -239,10 +238,7 @@ export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
           <div className="bg-green-500/10 rounded p-3 border border-green-400/50">
             <div className="text-sm text-green-300 font-mono mb-1 text-center">PLAGE ACCEPTÉE:</div>
             <div className="text-2xl font-bold text-green-400 font-mono text-center">
-              {cadenceTolerance === 0
-                ? `Exactement ${targetCadence} SPM`
-                : `${targetCadence - cadenceTolerance} - ${targetCadence + cadenceTolerance} SPM`
-              }
+              {targetCadence - cadenceTolerance} - {targetCadence + cadenceTolerance} SPM
             </div>
           </div>
 

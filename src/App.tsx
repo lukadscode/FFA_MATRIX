@@ -6,8 +6,6 @@ import { AdminPage } from './pages/AdminPage';
 import { AdminSelectPage } from './pages/AdminSelectPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { ErgRaceLogsPage } from './pages/ErgRaceLogsPage';
-import { StopRacePage } from './pages/StopRacePage';
-import { LedsLogsPage } from './pages/LedsLogsPage';
 
 function App() {
   return (
@@ -21,8 +19,6 @@ function App() {
           <Route path="/admin/:raceId" element={<AdminPage />} />
           <Route path="/results/:raceId" element={<ResultsPage />} />
           <Route path="/ergrace-logs" element={<ErgRaceLogsPage />} />
-          <Route path="/stop-race" element={<StopRacePage />} />
-          <Route path="/leds-logs" element={<LedsLogsPage />} />
         </Routes>
       </div>
     </BrowserRouter>

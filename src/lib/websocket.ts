@@ -204,26 +204,6 @@ class WebSocketClient {
     });
   }
 
-  async deleteRace(id: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      const unsubscribe = this.subscribe('raceDeleted', (message) => {
-        unsubscribe();
-        resolve(message.success as boolean);
-      });
-
-      this.send({ type: 'deleteRace', id });
-
-      setTimeout(() => {
-        unsubscribe();
-        resolve(false);
-      }, 5000);
-    });
-  }
-
-  async updateRaceStatus(id: string, status: string): Promise<Race | null> {
-    return this.updateRace(id, { status });
-  }
-
   disconnect() {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);

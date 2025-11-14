@@ -1,38 +1,23 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Participant } from '../lib/types';
 
 export type PM5Data = {
   cadence?: number;
   distance?: number;
   time?: number;
   power?: number;
-  timestamp?: number;
 };
 
 type OnDataCallback = (data: PM5Data, participantIndex: number) => void;
 
-const LED_WS_URL = 'ws://leds-ws-server.under-code.fr:8081';
-const LED_GAME_NAME = 'nomatrouver';
-
 export const useErgRaceWebSocket = (
   participantCount: number,
   onData: OnDataCallback,
-  isActive: boolean,
-  participants: Participant[] = [],
-  targetCadence: number = 20,
-  tolerance: number = 2
+  isActive: boolean
 ) => {
   const websocketsRef = useRef<WebSocket[]>([]);
-  const ledWsRef = useRef<WebSocket | null>(null);
-  const participantsRef = useRef<Participant[]>(participants);
   const [connectionStates, setConnectionStates] = useState<string[]>(
     Array(participantCount).fill('DISCONNECTED')
   );
-
-  // Mettre à jour la ref des participants
-  useEffect(() => {
-    participantsRef.current = participants;
-  }, [participants]);
 
   const parseErgRaceMessage = useCallback((message: string): Array<PM5Data | null> => {
     try {
@@ -95,40 +80,6 @@ export const useErgRaceWebSocket = (
             onData(parsedData, index);
           }
         });
-
-        // Envoyer les données aux LEDs en utilisant les données reçues directement
-        if (ledWsRef.current?.readyState === WebSocket.OPEN) {
-          const players = [];
-          for (let index = 0; index < participantCount; index++) {
-            const parsedData = parsedDataArray[index];
-            const participant = participantsRef.current[index];
-
-            // Utiliser la cadence reçue ou 0 si pas de données
-            const cadence = parsedData?.cadence ?? 0;
-            const isInCadence =
-              cadence >= (targetCadence - tolerance) &&
-              cadence <= (targetCadence + tolerance);
-
-            players.push({
-              id: index + 1,
-              rate: cadence,
-              'target-rate': isInCadence,
-              distance: participant?.total_distance_in_cadence || 0
-            });
-          }
-
-          const gameData = {
-            type: 'send_game_data',
-            payload: {
-              game: LED_GAME_NAME,
-              players: players
-            }
-          };
-          console.log('📤 ErgRace -> LEDs:', JSON.stringify(gameData, null, 2));
-          ledWsRef.current.send(JSON.stringify(gameData));
-        } else {
-          console.warn('⚠️ ErgRace: WebSocket LEDs non connecté');
-        }
       };
 
       ws.onerror = () => {
@@ -145,27 +96,6 @@ export const useErgRaceWebSocket = (
   useEffect(() => {
     if (!isActive) return;
 
-    // Vérifier si la connexion aux LEDs est activée
-    const ledEnabled = import.meta.env.VITE_LED_SERVER_ENABLED === 'true';
-    if (ledEnabled) {
-      // Connexion au serveur WebSocket des LEDs
-      ledWsRef.current = new WebSocket(LED_WS_URL);
-
-      ledWsRef.current.onopen = () => {
-        console.log('✅ ErgRace: Connecté au serveur WebSocket pour LEDs');
-      };
-
-      ledWsRef.current.onerror = (error) => {
-        console.error('❌ ErgRace: Erreur WebSocket LEDs:', error);
-      };
-
-      ledWsRef.current.onclose = () => {
-        console.log('❌ ErgRace: Déconnecté du serveur WebSocket LEDs');
-      };
-    } else {
-      console.log('ℹ️ ErgRace: Connexion LEDs désactivée (VITE_LED_SERVER_ENABLED non défini ou false)');
-    }
-
     connectWebSocket();
 
     return () => {
@@ -175,10 +105,6 @@ export const useErgRaceWebSocket = (
         }
       });
       websocketsRef.current = [];
-
-      if (ledWsRef.current) {
-        ledWsRef.current.close();
-      }
     };
   }, [participantCount, isActive, connectWebSocket]);
 

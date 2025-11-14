@@ -1,66 +1,30 @@
 import { useEffect, useRef } from 'react';
 import { PM5Data } from './useErgRaceWebSocket';
-import { Participant } from '../lib/types';
 
 type SimulationConfig = {
   participantCount: number;
   targetCadence: number;
   tolerance: number;
   onData: (data: PM5Data, participantIndex: number) => void;
-  raceName?: string;
-  participants?: Participant[];
 };
 
-const LED_WS_URL = 'ws://leds-ws-server.under-code.fr:8081';
-const LED_GAME_NAME = 'nomatrouver';
-
-export const useSimulation = ({ participantCount, targetCadence, tolerance, onData, raceName = 'Simulation', participants = [] }: SimulationConfig) => {
+export const useSimulation = ({ participantCount, targetCadence, tolerance, onData }: SimulationConfig) => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const raceNameRef = useRef<string>(raceName);
-  const participantsRef = useRef<Participant[]>(participants);
   const participantStates = useRef<Array<{
     distance: number;
     cadence: number;
     trend: number;
-    distanceInCadence: number;
-    lastDistance: number | null;
-    wasInCadence: boolean;
   }>>([]);
 
-  // Mettre à jour les refs quand les props changent
   useEffect(() => {
-    raceNameRef.current = raceName;
-    participantsRef.current = participants;
-  }, [raceName, participants]);
-
-  useEffect(() => {
-    // Connexion au serveur WebSocket pour forward aux LEDs
-    wsRef.current = new WebSocket(LED_WS_URL);
-
-    wsRef.current.onopen = () => {
-      console.log('✅ Mode Simulation: Connecté au serveur WebSocket pour LEDs');
-    };
-
-    wsRef.current.onerror = (error) => {
-      console.error('❌ Mode Simulation: Erreur WebSocket:', error);
-    };
-
-    wsRef.current.onclose = () => {
-      console.log('❌ Mode Simulation: Déconnecté du serveur WebSocket');
-    };
-
     participantStates.current = Array.from({ length: participantCount }, () => ({
       distance: 0,
-      cadence: targetCadence + Math.floor(Math.random() * (tolerance * 2 + 1)) - tolerance,
+      cadence: targetCadence + Math.floor(Math.random() * (tolerance * 2)) - tolerance,
       trend: 0,
-      distanceInCadence: 0,
-      lastDistance: null,
-      wasInCadence: false,
     }));
 
     intervalRef.current = setInterval(() => {
-      const players = participantStates.current.map((state, index) => {
+      participantStates.current.forEach((state, index) => {
         const randomVariation = Math.random() * 4 - 2;
         state.cadence = Math.max(10, Math.min(40, state.cadence + randomVariation));
 
@@ -74,63 +38,12 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
         };
 
         onData(pm5Data, index);
-
-        // Calculer si le participant est dans la cadence cible
-        const isInCadence =
-          pm5Data.cadence >= (targetCadence - tolerance) &&
-          pm5Data.cadence <= (targetCadence + tolerance);
-
-        // Calculer la distance en cadence (même logique que handlePM5Data dans RaceDisplay)
-        if (isInCadence) {
-          if (!state.wasInCadence) {
-            // Première entrée dans la cadence
-            state.distanceInCadence += 1;
-            state.lastDistance = state.distance;
-            state.wasInCadence = true;
-          } else if (state.lastDistance !== null) {
-            // Continue dans la cadence
-            const strokeDistanceInCadence = Math.floor(Math.abs(state.distance - state.lastDistance) / 10);
-            if (strokeDistanceInCadence > 0) {
-              state.distanceInCadence += strokeDistanceInCadence;
-              state.lastDistance = state.distance;
-            }
-          }
-        } else if (!isInCadence && state.wasInCadence) {
-          // Sortie de la cadence
-          state.wasInCadence = false;
-          state.lastDistance = null;
-        }
-
-        return {
-          id: index + 1,
-          rate: pm5Data.cadence,
-          'target-rate': isInCadence,
-          distance: state.distanceInCadence
-        };
       });
-
-      // Envoi des données au serveur WebSocket dans le même format que send_game_data
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        const gameData = {
-          type: 'send_game_data',
-          payload: {
-            game: LED_GAME_NAME,
-            players: players
-          }
-        };
-        console.log('📤 Simulation -> LEDs:', JSON.stringify(gameData, null, 2));
-        wsRef.current.send(JSON.stringify(gameData));
-      } else {
-        console.warn('⚠️ Simulation: WebSocket LEDs non connecté');
-      }
     }, 1000);
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
       }
     };
   }, [participantCount, targetCadence, tolerance, onData]);
