@@ -98,20 +98,24 @@ export const useErgRaceWebSocket = (
 
         // Envoyer les données aux LEDs en utilisant les données reçues directement
         if (ledWsRef.current?.readyState === WebSocket.OPEN) {
-          const players = parsedDataArray.map((parsedData, index) => {
+          const players = [];
+          for (let index = 0; index < participantCount; index++) {
+            const parsedData = parsedDataArray[index];
             const participant = participantsRef.current[index];
-            const cadence = parsedData?.cadence || participant?.current_cadence || 0;
+
+            // Utiliser la cadence reçue ou 0 si pas de données
+            const cadence = parsedData?.cadence ?? 0;
             const isInCadence =
               cadence >= (targetCadence - tolerance) &&
               cadence <= (targetCadence + tolerance);
 
-            return {
+            players.push({
               id: index + 1,
               rate: cadence,
               'target-rate': isInCadence,
               distance: participant?.total_distance_in_cadence || 0
-            };
-          });
+            });
+          }
 
           const gameData = {
             type: 'send_game_data',
