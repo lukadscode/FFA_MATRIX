@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Race } from '../lib/types';
 import { wsClient } from '../lib/websocket';
-import { Play, RefreshCw } from 'lucide-react';
+import { Play, RefreshCw, StopCircle, Activity } from 'lucide-react';
 
 export const AdminSelectPage = () => {
   const navigate = useNavigate();
@@ -62,7 +62,7 @@ export const AdminSelectPage = () => {
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-12">
+        <div className="flex justify-between items-center mb-8">
           <h1 className="text-5xl font-bold text-green-400 font-mono">
             ADMIN - SÉLECTION DE COURSE
           </h1>
@@ -72,6 +72,23 @@ export const AdminSelectPage = () => {
             title="Rafraîchir"
           >
             <RefreshCw className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <button
+            onClick={() => navigate('/stop-race')}
+            className="flex items-center justify-center gap-3 p-6 bg-red-500 text-black font-mono font-bold text-xl rounded-lg hover:bg-red-400 transition-colors"
+          >
+            <StopCircle className="w-8 h-8" />
+            ARRÊTER UNE COURSE
+          </button>
+          <button
+            onClick={() => navigate('/leds-logs')}
+            className="flex items-center justify-center gap-3 p-6 bg-blue-500 text-black font-mono font-bold text-xl rounded-lg hover:bg-blue-400 transition-colors"
+          >
+            <Activity className="w-8 h-8" />
+            LOGS LEDS
           </button>
         </div>
 

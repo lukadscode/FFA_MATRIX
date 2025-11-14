@@ -118,7 +118,10 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
             players: players
           }
         };
+        console.log('📤 Simulation -> LEDs:', JSON.stringify(gameData, null, 2));
         wsRef.current.send(JSON.stringify(gameData));
+      } else {
+        console.warn('⚠️ Simulation: WebSocket LEDs non connecté');
       }
     }, 1000);
 

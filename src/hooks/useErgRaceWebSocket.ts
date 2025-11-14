@@ -124,7 +124,10 @@ export const useErgRaceWebSocket = (
               players: players
             }
           };
+          console.log('📤 ErgRace -> LEDs:', JSON.stringify(gameData, null, 2));
           ledWsRef.current.send(JSON.stringify(gameData));
+        } else {
+          console.warn('⚠️ ErgRace: WebSocket LEDs non connecté');
         }
       };
 
