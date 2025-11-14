@@ -34,7 +34,6 @@ export const RacePage = () => {
         targetCadence: data.target_cadence,
         cadenceTolerance: data.cadence_tolerance,
         participants: [],
-        simulationMode: data.simulation_mode || false,
       });
     }
     setLoading(false);

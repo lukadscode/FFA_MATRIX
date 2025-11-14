@@ -16,7 +16,7 @@ export const SetupPage = () => {
       started_at: new Date().toISOString(),
       ended_at: null,
       last_cadence_change: null,
-      simulation_mode: config.simulationMode,
+      simulation_mode: false,
     });
 
     if (!race) return;
