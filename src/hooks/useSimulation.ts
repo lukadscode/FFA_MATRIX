@@ -23,6 +23,9 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
     distance: number;
     cadence: number;
     trend: number;
+    distanceInCadence: number;
+    lastDistance: number | null;
+    wasInCadence: boolean;
   }>>([]);
 
   // Mettre à jour les refs quand les props changent
@@ -51,6 +54,9 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
       distance: 0,
       cadence: targetCadence + Math.floor(Math.random() * (tolerance * 2 + 1)) - tolerance,
       trend: 0,
+      distanceInCadence: 0,
+      lastDistance: null,
+      wasInCadence: false,
     }));
 
     intervalRef.current = setInterval(() => {
@@ -74,15 +80,32 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
           pm5Data.cadence >= (targetCadence - tolerance) &&
           pm5Data.cadence <= (targetCadence + tolerance);
 
-        // Utiliser la vraie distance du participant depuis la base de données
-        const participant = participantsRef.current[index];
-        const realDistance = participant?.total_distance_in_cadence || 0;
+        // Calculer la distance en cadence (même logique que handlePM5Data dans RaceDisplay)
+        if (isInCadence) {
+          if (!state.wasInCadence) {
+            // Première entrée dans la cadence
+            state.distanceInCadence += 1;
+            state.lastDistance = state.distance;
+            state.wasInCadence = true;
+          } else if (state.lastDistance !== null) {
+            // Continue dans la cadence
+            const strokeDistanceInCadence = Math.floor(Math.abs(state.distance - state.lastDistance) / 10);
+            if (strokeDistanceInCadence > 0) {
+              state.distanceInCadence += strokeDistanceInCadence;
+              state.lastDistance = state.distance;
+            }
+          }
+        } else if (!isInCadence && state.wasInCadence) {
+          // Sortie de la cadence
+          state.wasInCadence = false;
+          state.lastDistance = null;
+        }
 
         return {
           id: index + 1,
           rate: pm5Data.cadence,
           'target-rate': isInCadence,
-          distance: realDistance
+          distance: state.distanceInCadence
         };
       });
 
