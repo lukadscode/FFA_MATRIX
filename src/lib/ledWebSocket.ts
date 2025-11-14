@@ -86,10 +86,9 @@ class LedWebSocketClient {
     });
   }
 
-  sendGameData(players: PlayerData[], targetCadence: number) {
+  sendGameData(players: PlayerData[]) {
     const payload = {
       game: 'nomatrouver',
-      'target-rate': targetCadence,
       players: players.map(p => ({
         id: p.id,
         rate: Math.round(p.rate * 100) / 100,

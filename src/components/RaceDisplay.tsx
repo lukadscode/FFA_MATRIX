@@ -166,7 +166,7 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
         distance: p.total_distance_in_cadence || 0,
       }));
 
-      ledWsClient.sendGameData(playersData, race.target_cadence);
+      ledWsClient.sendGameData(playersData);
     }, 1000);
 
     return () => clearInterval(interval);
