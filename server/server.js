@@ -250,25 +250,6 @@ wss.on("connection", (ws) => {
           break;
         }
 
-        case "simulation_data": {
-          console.log(`🤖 Simulation data received: participant ${data.participantIndex}, cadence ${data.cadence}, target ${data.targetCadence}±${data.tolerance}`);
-
-          // Forward to LED server
-          sendToLEDServer({
-            type: "simulation_data",
-            participantIndex: data.participantIndex,
-            cadence: data.cadence,
-            distance: data.distance,
-            timestamp: data.timestamp,
-            targetCadence: data.targetCadence,
-            tolerance: data.tolerance,
-            isInCadence: data.isInCadence
-          });
-
-          response = { type: "simulation_data_sent" };
-          break;
-        }
-
         case "send_game_data": {
           console.log(`🎮 Game data received: ${data.payload.game}, ${data.payload.players.length} players`);
 

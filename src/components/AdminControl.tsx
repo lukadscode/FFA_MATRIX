@@ -52,7 +52,7 @@ export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) =>
   const updateTolerance = async (newTolerance: number) => {
     if (!race) return;
 
-    const validTolerance = Math.max(1, newTolerance);
+    const validTolerance = Math.max(0, newTolerance);
     setRace({ ...race, cadence_tolerance: validTolerance });
 
     const updated = await wsClient.updateRace(raceId, {
@@ -145,7 +145,7 @@ export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) =>
               <div className="flex items-center justify-center gap-4 mb-4">
                 <button
                   onClick={() => updateTolerance(race.cadence_tolerance - 1)}
-                  disabled={race.cadence_tolerance <= 1}
+                  disabled={race.cadence_tolerance <= 0}
                   className="bg-green-500 hover:bg-green-400 text-black rounded-full p-3 transition-all shadow-lg shadow-green-500/50 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Minus className="w-5 h-5" />
@@ -164,8 +164,8 @@ export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) =>
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                {[1, 2, 3, 4, 5, 6].map((tolerance) => (
+              <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
+                {[0, 1, 2, 3, 4, 5, 6].map((tolerance) => (
                   <button
                     key={tolerance}
                     onClick={() => updateTolerance(tolerance)}
@@ -187,7 +187,10 @@ export const AdminControl = ({ raceId, raceName, onBack }: AdminControlProps) =>
                   PLAGE ACCEPTÉE ACTUELLEMENT
                 </div>
                 <div className="text-3xl font-bold text-green-400 font-mono">
-                  {race.target_cadence - race.cadence_tolerance} - {race.target_cadence + race.cadence_tolerance}
+                  {race.cadence_tolerance === 0
+                    ? `Exactement ${race.target_cadence}`
+                    : `${race.target_cadence - race.cadence_tolerance} - ${race.target_cadence + race.cadence_tolerance}`
+                  }
                 </div>
                 <div className="text-lg text-green-300 font-mono mt-1">SPM</div>
               </div>

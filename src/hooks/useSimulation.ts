@@ -6,12 +6,13 @@ type SimulationConfig = {
   targetCadence: number;
   tolerance: number;
   onData: (data: PM5Data, participantIndex: number) => void;
+  raceName?: string;
 };
 
 const WS_HOST = import.meta.env.VITE_WS_HOST || 'localhost';
 const LED_WS_URL = `ws://${WS_HOST}:8081`;
 
-export const useSimulation = ({ participantCount, targetCadence, tolerance, onData }: SimulationConfig) => {
+export const useSimulation = ({ participantCount, targetCadence, tolerance, onData, raceName = 'Simulation' }: SimulationConfig) => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const participantStates = useRef<Array<{
@@ -38,12 +39,12 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
 
     participantStates.current = Array.from({ length: participantCount }, () => ({
       distance: 0,
-      cadence: targetCadence + Math.floor(Math.random() * (tolerance * 2)) - tolerance,
+      cadence: targetCadence + Math.floor(Math.random() * (tolerance * 2 + 1)) - tolerance,
       trend: 0,
     }));
 
     intervalRef.current = setInterval(() => {
-      participantStates.current.forEach((state, index) => {
+      const players = participantStates.current.map((state, index) => {
         const randomVariation = Math.random() * 4 - 2;
         state.cadence = Math.max(10, Math.min(40, state.cadence + randomVariation));
 
@@ -58,25 +59,30 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
 
         onData(pm5Data, index);
 
-        // Envoi des données au serveur WebSocket (qui les forwardera aux LEDs)
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          const isInCadence =
-            pm5Data.cadence >= (targetCadence - tolerance) &&
-            pm5Data.cadence <= (targetCadence + tolerance);
+        // Calculer si le participant est dans la cadence cible
+        const isInCadence =
+          pm5Data.cadence >= (targetCadence - tolerance) &&
+          pm5Data.cadence <= (targetCadence + tolerance);
 
-          const simulationData = {
-            type: 'simulation_data',
-            participantIndex: index,
-            cadence: pm5Data.cadence,
-            distance: pm5Data.distance,
-            timestamp: pm5Data.timestamp,
-            targetCadence: targetCadence,
-            tolerance: tolerance,
-            isInCadence: isInCadence,
-          };
-          wsRef.current.send(JSON.stringify(simulationData));
-        }
+        return {
+          id: index + 1,
+          rate: pm5Data.cadence,
+          'target-rate': isInCadence,
+          distance: state.distance
+        };
       });
+
+      // Envoi des données au serveur WebSocket dans le même format que send_game_data
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        const gameData = {
+          type: 'send_game_data',
+          payload: {
+            game: raceName,
+            players: players
+          }
+        };
+        wsRef.current.send(JSON.stringify(gameData));
+      }
     }, 1000);
 
     return () => {
@@ -87,7 +93,7 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
         wsRef.current.close();
       }
     };
-  }, [participantCount, targetCadence, tolerance, onData]);
+  }, [participantCount, targetCadence, tolerance, onData, raceName]);
 
   const connectionStates = Array(participantCount).fill('CONNECTED');
 
