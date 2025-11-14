@@ -19,9 +19,9 @@ export const useLedsWebSocket = ({ participants, targetCadence, tolerance, isAct
     if (!isActive) return;
 
     // Vérifier si la connexion aux LEDs est activée
-    const ledEnabled = import.meta.env.VITE_LED_SERVER_ENABLED !== 'false';
+    const ledEnabled = import.meta.env.VITE_LED_SERVER_ENABLED === 'true';
     if (!ledEnabled) {
-      console.log('ℹ️ LEDs: Connexion désactivée via VITE_LED_SERVER_ENABLED');
+      console.log('ℹ️ LEDs: Connexion désactivée (VITE_LED_SERVER_ENABLED non défini ou false)');
       return;
     }
 

@@ -146,7 +146,7 @@ export const useErgRaceWebSocket = (
     if (!isActive) return;
 
     // Vérifier si la connexion aux LEDs est activée
-    const ledEnabled = import.meta.env.VITE_LED_SERVER_ENABLED !== 'false';
+    const ledEnabled = import.meta.env.VITE_LED_SERVER_ENABLED === 'true';
     if (ledEnabled) {
       // Connexion au serveur WebSocket des LEDs
       ledWsRef.current = new WebSocket(LED_WS_URL);
@@ -163,7 +163,7 @@ export const useErgRaceWebSocket = (
         console.log('❌ ErgRace: Déconnecté du serveur WebSocket LEDs');
       };
     } else {
-      console.log('ℹ️ ErgRace: Connexion LEDs désactivée via VITE_LED_SERVER_ENABLED');
+      console.log('ℹ️ ErgRace: Connexion LEDs désactivée (VITE_LED_SERVER_ENABLED non défini ou false)');
     }
 
     connectWebSocket();
