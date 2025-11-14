@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Participant, Race } from '../lib/types';
 import { useErgRaceWebSocket, PM5Data } from '../hooks/useErgRaceWebSocket';
-import { useSimulation } from '../hooks/useSimulation';
 import { useErgRaceStatus } from '../hooks/useErgRaceStatus';
 import { ParticipantCard } from './ParticipantCard';
 import { TeamCard } from './TeamCard';
@@ -78,22 +77,11 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
     [participants, config, raceId, race]
   );
 
-  const ergRaceConnection = useErgRaceWebSocket(
+  const { connectionStates } = useErgRaceWebSocket(
     participants.length,
     handlePM5Data,
-    !config.simulationMode
+    true
   );
-
-  const simulationConnection = useSimulation({
-    participantCount: participants.length,
-    targetCadence: config.targetCadence,
-    tolerance: config.cadenceTolerance,
-    onData: handlePM5Data,
-  });
-
-  const connectionStates = config.simulationMode
-    ? simulationConnection.connectionStates
-    : ergRaceConnection.connectionStates;
 
   useEffect(() => {
     const loadRace = async () => {
@@ -270,11 +258,6 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
           <h1 className="text-6xl font-bold text-green-400 font-mono mb-4 animate-pulse">
             {config.name.toUpperCase()}
           </h1>
-          {config.simulationMode && (
-            <div className="text-2xl font-mono text-cyan-400 mb-3 animate-pulse">
-              🤖 MODE SIMULATION
-            </div>
-          )}
           <div className="text-3xl font-mono text-green-400">
             CADENCE CIBLE: {currentTargetCadence} SPM (±{currentTolerance})
           </div>
