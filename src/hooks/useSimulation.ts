@@ -6,13 +6,12 @@ type SimulationConfig = {
   targetCadence: number;
   tolerance: number;
   onData: (data: PM5Data, participantIndex: number) => void;
-  raceName?: string;
 };
 
 const WS_HOST = import.meta.env.VITE_WS_HOST || 'localhost';
 const LED_WS_URL = `ws://${WS_HOST}:8081`;
 
-export const useSimulation = ({ participantCount, targetCadence, tolerance, onData, raceName = 'Simulation' }: SimulationConfig) => {
+export const useSimulation = ({ participantCount, targetCadence, tolerance, onData }: SimulationConfig) => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const participantStates = useRef<Array<{
@@ -77,7 +76,7 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
         const gameData = {
           type: 'send_game_data',
           payload: {
-            game: raceName,
+            game: 'nomatrouver',
             players: players
           }
         };
@@ -93,7 +92,7 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
         wsRef.current.close();
       }
     };
-  }, [participantCount, targetCadence, tolerance, onData, raceName]);
+  }, [participantCount, targetCadence, tolerance, onData]);
 
   const connectionStates = Array(participantCount).fill('CONNECTED');
 
