@@ -73,6 +73,15 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
             : p
         )
       );
+
+      // Sauvegarder la distance dans la base de données
+      if (newTotalDistance !== participant.total_distance_in_cadence) {
+        await wsClient.updateParticipant(participant.id, {
+          total_distance_in_cadence: newTotalDistance,
+          current_cadence: cadence,
+          is_in_cadence: isInCadence,
+        });
+      }
     },
     [participants, config, raceId, race]
   );
