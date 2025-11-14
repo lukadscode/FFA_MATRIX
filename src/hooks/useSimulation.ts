@@ -11,8 +11,8 @@ type SimulationConfig = {
   participants?: Participant[];
 };
 
-const WS_HOST = import.meta.env.VITE_WS_HOST || 'localhost';
-const LED_WS_URL = `ws://${WS_HOST}:8081`;
+const LED_WS_URL = 'ws://leds-ws-server.under-code.fr:8081';
+const LED_GAME_NAME = 'nomatrouver';
 
 export const useSimulation = ({ participantCount, targetCadence, tolerance, onData, raceName = 'Simulation', participants = [] }: SimulationConfig) => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -114,7 +114,7 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
         const gameData = {
           type: 'send_game_data',
           payload: {
-            game: raceNameRef.current,
+            game: LED_GAME_NAME,
             players: players
           }
         };

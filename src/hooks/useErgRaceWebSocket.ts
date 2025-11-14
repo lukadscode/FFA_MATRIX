@@ -1,23 +1,38 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { Participant } from '../lib/types';
 
 export type PM5Data = {
   cadence?: number;
   distance?: number;
   time?: number;
   power?: number;
+  timestamp?: number;
 };
 
 type OnDataCallback = (data: PM5Data, participantIndex: number) => void;
 
+const LED_WS_URL = 'ws://leds-ws-server.under-code.fr:8081';
+const LED_GAME_NAME = 'nomatrouver';
+
 export const useErgRaceWebSocket = (
   participantCount: number,
   onData: OnDataCallback,
-  isActive: boolean
+  isActive: boolean,
+  participants: Participant[] = [],
+  targetCadence: number = 20,
+  tolerance: number = 2
 ) => {
   const websocketsRef = useRef<WebSocket[]>([]);
+  const ledWsRef = useRef<WebSocket | null>(null);
+  const participantsRef = useRef<Participant[]>(participants);
   const [connectionStates, setConnectionStates] = useState<string[]>(
     Array(participantCount).fill('DISCONNECTED')
   );
+
+  // Mettre à jour la ref des participants
+  useEffect(() => {
+    participantsRef.current = participants;
+  }, [participants]);
 
   const parseErgRaceMessage = useCallback((message: string): Array<PM5Data | null> => {
     try {
@@ -80,6 +95,31 @@ export const useErgRaceWebSocket = (
             onData(parsedData, index);
           }
         });
+
+        // Envoyer les données aux LEDs
+        if (ledWsRef.current?.readyState === WebSocket.OPEN) {
+          const players = participantsRef.current.map((participant, index) => {
+            const isInCadence =
+              participant.current_cadence >= (targetCadence - tolerance) &&
+              participant.current_cadence <= (targetCadence + tolerance);
+
+            return {
+              id: index + 1,
+              rate: participant.current_cadence,
+              'target-rate': isInCadence,
+              distance: participant.total_distance_in_cadence
+            };
+          });
+
+          const gameData = {
+            type: 'send_game_data',
+            payload: {
+              game: LED_GAME_NAME,
+              players: players
+            }
+          };
+          ledWsRef.current.send(JSON.stringify(gameData));
+        }
       };
 
       ws.onerror = () => {
@@ -96,6 +136,21 @@ export const useErgRaceWebSocket = (
   useEffect(() => {
     if (!isActive) return;
 
+    // Connexion au serveur WebSocket des LEDs
+    ledWsRef.current = new WebSocket(LED_WS_URL);
+
+    ledWsRef.current.onopen = () => {
+      console.log('✅ ErgRace: Connecté au serveur WebSocket pour LEDs');
+    };
+
+    ledWsRef.current.onerror = (error) => {
+      console.error('❌ ErgRace: Erreur WebSocket LEDs:', error);
+    };
+
+    ledWsRef.current.onclose = () => {
+      console.log('❌ ErgRace: Déconnecté du serveur WebSocket LEDs');
+    };
+
     connectWebSocket();
 
     return () => {
@@ -105,6 +160,10 @@ export const useErgRaceWebSocket = (
         }
       });
       websocketsRef.current = [];
+
+      if (ledWsRef.current) {
+        ledWsRef.current.close();
+      }
     };
   }, [participantCount, isActive, connectWebSocket]);
 

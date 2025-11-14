@@ -81,7 +81,10 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
   const ergRaceConnection = useErgRaceWebSocket(
     participants.length,
     handlePM5Data,
-    !config.simulationMode
+    !config.simulationMode,
+    participants,
+    config.targetCadence,
+    config.cadenceTolerance
   );
 
   const simulationConnection = useSimulation({
