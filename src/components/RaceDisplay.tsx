@@ -89,6 +89,8 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
     targetCadence: config.targetCadence,
     tolerance: config.cadenceTolerance,
     onData: handlePM5Data,
+    raceName: config.name,
+    participants: participants,
   });
 
   const connectionStates = config.simulationMode

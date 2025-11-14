@@ -1,24 +1,35 @@
 import { useEffect, useRef } from 'react';
 import { PM5Data } from './useErgRaceWebSocket';
+import { Participant } from '../lib/types';
 
 type SimulationConfig = {
   participantCount: number;
   targetCadence: number;
   tolerance: number;
   onData: (data: PM5Data, participantIndex: number) => void;
+  raceName?: string;
+  participants?: Participant[];
 };
 
 const WS_HOST = import.meta.env.VITE_WS_HOST || 'localhost';
 const LED_WS_URL = `ws://${WS_HOST}:8081`;
 
-export const useSimulation = ({ participantCount, targetCadence, tolerance, onData }: SimulationConfig) => {
+export const useSimulation = ({ participantCount, targetCadence, tolerance, onData, raceName = 'Simulation', participants = [] }: SimulationConfig) => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const raceNameRef = useRef<string>(raceName);
+  const participantsRef = useRef<Participant[]>(participants);
   const participantStates = useRef<Array<{
     distance: number;
     cadence: number;
     trend: number;
   }>>([]);
+
+  // Mettre à jour les refs quand les props changent
+  useEffect(() => {
+    raceNameRef.current = raceName;
+    participantsRef.current = participants;
+  }, [raceName, participants]);
 
   useEffect(() => {
     // Connexion au serveur WebSocket pour forward aux LEDs
@@ -63,11 +74,15 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
           pm5Data.cadence >= (targetCadence - tolerance) &&
           pm5Data.cadence <= (targetCadence + tolerance);
 
+        // Utiliser la vraie distance du participant depuis la base de données
+        const participant = participantsRef.current[index];
+        const realDistance = participant?.total_distance_in_cadence || 0;
+
         return {
           id: index + 1,
           rate: pm5Data.cadence,
           'target-rate': isInCadence,
-          distance: state.distance
+          distance: realDistance
         };
       });
 
@@ -76,7 +91,7 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
         const gameData = {
           type: 'send_game_data',
           payload: {
-            game: 'nomatrouver',
+            game: raceNameRef.current,
             players: players
           }
         };
