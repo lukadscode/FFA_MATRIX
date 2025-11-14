@@ -251,7 +251,7 @@ wss.on("connection", (ws) => {
         }
 
         case "simulation_data": {
-          console.log(`🤖 Simulation data received: participant ${data.participantIndex}, cadence ${data.cadence}`);
+          console.log(`🤖 Simulation data received: participant ${data.participantIndex}, cadence ${data.cadence}, target ${data.targetCadence}±${data.tolerance}`);
 
           // Forward to LED server
           sendToLEDServer({
@@ -259,7 +259,10 @@ wss.on("connection", (ws) => {
             participantIndex: data.participantIndex,
             cadence: data.cadence,
             distance: data.distance,
-            timestamp: data.timestamp
+            timestamp: data.timestamp,
+            targetCadence: data.targetCadence,
+            tolerance: data.tolerance,
+            isInCadence: data.isInCadence
           });
 
           response = { type: "simulation_data_sent" };

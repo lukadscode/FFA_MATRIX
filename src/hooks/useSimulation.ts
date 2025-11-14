@@ -60,12 +60,19 @@ export const useSimulation = ({ participantCount, targetCadence, tolerance, onDa
 
         // Envoi des données au serveur WebSocket (qui les forwardera aux LEDs)
         if (wsRef.current?.readyState === WebSocket.OPEN) {
+          const isInCadence =
+            pm5Data.cadence >= (targetCadence - tolerance) &&
+            pm5Data.cadence <= (targetCadence + tolerance);
+
           const simulationData = {
             type: 'simulation_data',
             participantIndex: index,
             cadence: pm5Data.cadence,
             distance: pm5Data.distance,
             timestamp: pm5Data.timestamp,
+            targetCadence: targetCadence,
+            tolerance: tolerance,
+            isInCadence: isInCadence,
           };
           wsRef.current.send(JSON.stringify(simulationData));
         }
