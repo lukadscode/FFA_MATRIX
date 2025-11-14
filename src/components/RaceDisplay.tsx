@@ -9,6 +9,7 @@ import { CadenceChangeNotification } from './CadenceChangeNotification';
 import { playCadenceChangeSound } from '../utils/sound';
 import { Settings } from 'lucide-react';
 import { wsClient } from '../lib/websocket';
+import { ledWsClient } from '../lib/ledWebSocket';
 
 type RaceDisplayProps = {
   raceId: string;
@@ -142,6 +143,9 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
     if (raceStatus?.state === 9 && !raceStarted) {
       console.log('🏁 ErgRace démarré ! Lancement du chronomètre');
       setRaceStarted(true);
+
+      // Envoyer la commande GO aux panneaux LED
+      ledWsClient.sendGlobalCommand('GO', 'GO');
     }
 
     if (raceStatus?.state === 11 && raceStarted) {
@@ -149,6 +153,24 @@ export const RaceDisplay = ({ raceId, config, onRaceComplete, onOpenAdmin }: Rac
       handleRaceEnd();
     }
   }, [raceStatus, raceStarted]);
+
+  // Envoyer les données aux panneaux LED toutes les secondes
+  useEffect(() => {
+    if (!raceStarted || !race) return;
+
+    const interval = setInterval(() => {
+      const playersData = participants.map((p, index) => ({
+        id: index + 1,
+        rate: p.current_cadence || 0,
+        'target-rate': p.is_in_cadence || false,
+        distance: p.total_distance_in_cadence || 0,
+      }));
+
+      ledWsClient.sendGameData(playersData, race.target_cadence);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [raceStarted, participants, race]);
 
 
   const handleRaceEnd = async () => {
