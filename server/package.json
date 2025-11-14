@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "stop": "bash stop-server.sh"
+    "stop": "stop-server.bat",
+    "stop:linux": "bash stop-server.sh"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
