@@ -204,12 +204,25 @@ export const RaceSetup = ({ onStartRace }: RaceSetupProps) => {
             </div>
             <div>
               <label className="block text-green-400 font-mono mb-2">TOLÉRANCE (±SPM):</label>
-              <input
-                type="number"
-                value={cadenceTolerance}
-                onChange={(e) => setCadenceTolerance(Number(e.target.value))}
-                className="w-full bg-black/50 border border-green-400 rounded px-4 py-2 text-green-400 font-mono focus:outline-none focus:border-green-300"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  value={cadenceTolerance}
+                  onChange={(e) => setCadenceTolerance(Number(e.target.value))}
+                  className="flex-1 bg-black/50 border border-green-400 rounded px-4 py-2 text-green-400 font-mono focus:outline-none focus:border-green-300"
+                />
+                <button
+                  onClick={() => setCadenceTolerance(0)}
+                  className={`px-3 py-2 rounded font-mono font-bold transition-all ${
+                    cadenceTolerance === 0
+                      ? 'bg-green-500 text-black'
+                      : 'bg-black/50 text-green-400 border border-green-400 hover:bg-green-500/20'
+                  }`}
+                >
+                  0
+                </button>
+              </div>
             </div>
           </div>
 
