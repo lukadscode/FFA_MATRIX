@@ -156,8 +156,10 @@ wss.on("connection", (ws) => {
 
         case "deleteRace": {
           deleteRace(data.id);
-          response = { type: "raceDeleted", id: data.id };
+          deleteParticipants(data.id);
+          response = { type: "raceDeleted", id: data.id, success: true };
           broadcastMessage = { type: "raceDeleted", id: data.id };
+          console.log(`🗑️  Race ${data.id} and its participants deleted`);
           break;
         }
 

@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Race } from '../lib/types';
 import { wsClient } from '../lib/websocket';
-import { StopCircle, RefreshCw, ArrowLeft } from 'lucide-react';
+import { StopCircle, RefreshCw, ArrowLeft, Trash2 } from 'lucide-react';
 
 export const StopRacePage = () => {
   const navigate = useNavigate();
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
   const [stopping, setStopping] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const loadActiveRaces = async () => {
     setLoading(true);
@@ -39,6 +40,27 @@ export const StopRacePage = () => {
       alert('Erreur lors de l\'arrêt de la course');
     } finally {
       setStopping(null);
+    }
+  };
+
+  const handleDeleteRace = async (raceId: string) => {
+    if (!confirm('⚠️ ATTENTION: Cette action va SUPPRIMER DÉFINITIVEMENT la course et toutes ses données. Continuer ?')) {
+      return;
+    }
+
+    setDeleting(raceId);
+    try {
+      const success = await wsClient.deleteRace(raceId);
+      if (success) {
+        await loadActiveRaces();
+      } else {
+        alert('Erreur lors de la suppression de la course');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la course:', error);
+      alert('Erreur lors de la suppression de la course');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -106,18 +128,32 @@ export const StopRacePage = () => {
                       <span>Durée: {Math.floor(race.duration_seconds / 60)}:{(race.duration_seconds % 60).toString().padStart(2, '0')}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleStopRace(race.id)}
-                    disabled={stopping === race.id}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-lg font-mono font-bold transition-colors ${
-                      stopping === race.id
-                        ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
-                        : 'bg-red-500 text-black hover:bg-red-400'
-                    }`}
-                  >
-                    <StopCircle className="w-6 h-6" />
-                    {stopping === race.id ? 'ARRÊT...' : 'ARRÊTER'}
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleStopRace(race.id)}
+                      disabled={stopping === race.id || deleting === race.id}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-mono font-bold transition-colors ${
+                        stopping === race.id || deleting === race.id
+                          ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                          : 'bg-orange-500 text-black hover:bg-orange-400'
+                      }`}
+                    >
+                      <StopCircle className="w-6 h-6" />
+                      {stopping === race.id ? 'ARRÊT...' : 'ARRÊTER'}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRace(race.id)}
+                      disabled={stopping === race.id || deleting === race.id}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-mono font-bold transition-colors ${
+                        stopping === race.id || deleting === race.id
+                          ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                          : 'bg-red-500 text-black hover:bg-red-400'
+                      }`}
+                    >
+                      <Trash2 className="w-6 h-6" />
+                      {deleting === race.id ? 'SUPPRESSION...' : 'SUPPRIMER'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="text-sm font-mono text-gray-500">
