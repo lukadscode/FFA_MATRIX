@@ -145,20 +145,26 @@ export const useErgRaceWebSocket = (
   useEffect(() => {
     if (!isActive) return;
 
-    // Connexion au serveur WebSocket des LEDs
-    ledWsRef.current = new WebSocket(LED_WS_URL);
+    // Vérifier si la connexion aux LEDs est activée
+    const ledEnabled = import.meta.env.VITE_LED_SERVER_ENABLED !== 'false';
+    if (ledEnabled) {
+      // Connexion au serveur WebSocket des LEDs
+      ledWsRef.current = new WebSocket(LED_WS_URL);
 
-    ledWsRef.current.onopen = () => {
-      console.log('✅ ErgRace: Connecté au serveur WebSocket pour LEDs');
-    };
+      ledWsRef.current.onopen = () => {
+        console.log('✅ ErgRace: Connecté au serveur WebSocket pour LEDs');
+      };
 
-    ledWsRef.current.onerror = (error) => {
-      console.error('❌ ErgRace: Erreur WebSocket LEDs:', error);
-    };
+      ledWsRef.current.onerror = (error) => {
+        console.error('❌ ErgRace: Erreur WebSocket LEDs:', error);
+      };
 
-    ledWsRef.current.onclose = () => {
-      console.log('❌ ErgRace: Déconnecté du serveur WebSocket LEDs');
-    };
+      ledWsRef.current.onclose = () => {
+        console.log('❌ ErgRace: Déconnecté du serveur WebSocket LEDs');
+      };
+    } else {
+      console.log('ℹ️ ErgRace: Connexion LEDs désactivée via VITE_LED_SERVER_ENABLED');
+    }
 
     connectWebSocket();
 

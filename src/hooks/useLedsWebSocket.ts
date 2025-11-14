@@ -18,6 +18,13 @@ export const useLedsWebSocket = ({ participants, targetCadence, tolerance, isAct
   useEffect(() => {
     if (!isActive) return;
 
+    // Vérifier si la connexion aux LEDs est activée
+    const ledEnabled = import.meta.env.VITE_LED_SERVER_ENABLED !== 'false';
+    if (!ledEnabled) {
+      console.log('ℹ️ LEDs: Connexion désactivée via VITE_LED_SERVER_ENABLED');
+      return;
+    }
+
     console.log('🔌 Connexion au serveur LEDs:', LED_WS_URL);
     wsRef.current = new WebSocket(LED_WS_URL);
 
