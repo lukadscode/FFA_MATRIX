@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Download } from 'lucide-react';
+import { ArrowLeft, Trash2, Download, StopCircle } from 'lucide-react';
+import { Race } from '../lib/types';
+import { wsClient } from '../lib/websocket';
 
 type LogEntry = {
   timestamp: string;
@@ -15,6 +17,8 @@ export const LedsLogsPage = () => {
   const navigate = useNavigate();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [activeRaces, setActiveRaces] = useState<Race[]>([]);
+  const [stopping, setStopping] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -60,13 +64,23 @@ export const LedsLogsPage = () => {
     }
   };
 
+  const loadActiveRaces = async () => {
+    const allRaces = await wsClient.getAllRaces();
+    const active = allRaces.filter(race => race.status === 'active');
+    setActiveRaces(active);
+  };
+
   useEffect(() => {
     connectWebSocket();
+    loadActiveRaces();
+
+    const interval = setInterval(loadActiveRaces, 3000);
 
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
       }
+      clearInterval(interval);
     };
   }, []);
 
@@ -91,6 +105,24 @@ export const LedsLogsPage = () => {
     a.download = `leds-logs-${new Date().toISOString()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleStopRace = async (raceId: string, raceName: string) => {
+    if (!confirm(`Arrêter la course "${raceName}" ?`)) {
+      return;
+    }
+
+    setStopping(raceId);
+    try {
+      await wsClient.updateRaceStatus(raceId, 'completed');
+      await loadActiveRaces();
+      addLog('connection', `Course arrêtée: ${raceName}`);
+    } catch (error) {
+      console.error('Erreur lors de l\'arrêt de la course:', error);
+      addLog('error', `Erreur lors de l'arrêt de la course: ${raceName}`);
+    } finally {
+      setStopping(null);
+    }
   };
 
   const getLogColor = (type: LogEntry['type']) => {
@@ -168,6 +200,46 @@ export const LedsLogsPage = () => {
             </button>
           </div>
         </div>
+
+        {activeRaces.length > 0 && (
+          <div className="mb-6 bg-orange-500/20 border-2 border-orange-500 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-orange-500 animate-pulse" />
+                <h2 className="text-xl font-bold text-orange-400 font-mono">
+                  COURSES ACTIVES ENVOYANT DES DONNÉES ({activeRaces.length})
+                </h2>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              {activeRaces.map((race) => (
+                <div
+                  key={race.id}
+                  className="flex items-center justify-between bg-black/50 p-3 rounded border border-orange-500/50"
+                >
+                  <div className="flex-1">
+                    <div className="font-bold text-orange-300 font-mono">{race.name}</div>
+                    <div className="text-sm text-gray-400 font-mono">
+                      Mode: {race.mode === 'solo' ? 'SOLO' : 'ÉQUIPE'} • Cadence: {race.target_cadence} SPM
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleStopRace(race.id, race.name)}
+                    disabled={stopping === race.id}
+                    className={`flex items-center gap-2 px-4 py-2 rounded font-mono font-bold transition-colors ${
+                      stopping === race.id
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        : 'bg-red-500 text-black hover:bg-red-400'
+                    }`}
+                  >
+                    <StopCircle className="w-4 h-4" />
+                    {stopping === race.id ? 'ARRÊT...' : 'ARRÊTER'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="bg-black/90 border-2 border-green-500 rounded-lg p-4 h-[calc(100vh-200px)] overflow-y-auto">
           {logs.length === 0 ? (
